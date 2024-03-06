@@ -99,6 +99,8 @@ server <- function(input, output,session) {
       fileInput("file", "Choisissez un fichier CSV"),
       htmlOutput("statut"),
       htmlOutput("error"),
+      htmlOutput("statut_data"),
+      htmlOutput("error_data"),
       numericInput("Horizon", "Nombre d'années de simulation ( multiple de 5)",min = 0 ,value = NA, step = 5),
       radioButtons("RecruesGaules", "Recrues gaules",
                    choices = list("Oui" = 1, "Non" = 0),
@@ -107,7 +109,8 @@ server <- function(input, output,session) {
         condition = "input.RecruesGaules == 1",
         fileInput("gauleFile", "Fichier Gaule doit être téléchargé avant la simulation")
       ),
-      
+      htmlOutput("statut_data_gaules"),
+      htmlOutput("error_data_gaules"),
       numericInput("NbIter", "Nombre d'itérations", min = 2,value = NA),
       radioButtons("Billonnage", "Billonnage ?",
                    choices = list("Oui" = "1", "Non" = "0"), # Notez les valeurs comme des chaînes de caractères
@@ -133,6 +136,12 @@ server <- function(input, output,session) {
    # read.csv(input$file$datapath, sep  = ";")
     read_delim(input$file$datapath, delim   = ";")
   })
+  gaule_data <- reactive({
+    req(input$gauleFile)
+    # read.csv(input$gauleFile$datapath, sep  = ";")
+    read_delim(input$gauleFile$datapath, delim   = ";")
+    
+  })
   simulation_status <- reactiveVal("Attente de la simulation...")
   
   # Appeler la fonction pour la simulation avec le dataframe lu
@@ -142,20 +151,53 @@ server <- function(input, output,session) {
   processed_data_DendroIterSamare <- reactiveVal(NULL)
   processed_data_htvol <- reactiveVal(NULL)
   processed_absent <- reactiveVal(NULL)
+  processed_absent_gaules <- reactiveVal(NULL)
+  valider_data <- reactiveVal(NULL)
+  valider_data_gaules <- reactiveVal(NULL)
   processed_Billonage <- reactiveVal(NULL)
   reponse_bio<- reactiveVal(NULL)
   graph_to_print <- reactiveVal(NULL)
   graph<- reactiveVal(NULL)
+  
   observeEvent(input$file, {
+    
     processed_absent(trouver_noms_absents(data()))
+    valider_data(valide_data(data()))
     
     if (length(processed_absent()) != 0) {
       list_string <- paste(processed_absent(), collapse = ', ')
-      output$statut <- renderText({
+      output$statut_data <- renderText({
         HTML("<b>Les colonnes suivantes sont manquantes :</b>")
       })
-      output$error <- renderText({
+      output$error_data <- renderText({
         HTML(paste("<span style='color:red;'>", list_string, "</span>"))
+      })
+    } else {
+      output$statut_data <- renderText({
+        HTML("")
+      })
+      output$error_data <- renderText({
+        HTML("")
+      })
+      
+      
+     
+      
+      
+      output$conditionalButton <- renderUI({
+        if (!is.null(input$file) && !is.na(input$Horizon) && !is.na(input$NbIter) && input$NbIter > 1) {
+          actionButton("simulateButton", "Simulation")
+        }
+      }) 
+    }
+    
+    if (length(valider_data()) != 0) {
+      list_string1 <- paste(valider_data(), collapse = ', ')
+      output$statut <- renderText({
+        HTML("<b>Les erreurs suivantes ont été détectées :</b>")
+      })
+      output$error <- renderText({
+        HTML(paste("<span style='color:red;'>", list_string1, "</span>"))
       })
     } else {
       output$statut <- renderText({
@@ -167,13 +209,83 @@ server <- function(input, output,session) {
       
       
       
+      
+      
       output$conditionalButton <- renderUI({
         if (!is.null(input$file) && !is.na(input$Horizon) && !is.na(input$NbIter) && input$NbIter > 1) {
           actionButton("simulateButton", "Simulation")
         }
       }) 
     }
+    
+    
+    
   })
+  
+
+  observeEvent(input$gauleFile, {
+    processed_absent_gaules(trouver_noms_absents_gaules(gaule_data()))
+    valider_data_gaules(valide_data_gaules(gaule_data()))
+    
+    if (length(processed_absent_gaules()) != 0) {
+      list_string_gaules <- paste(processed_absent_gaules(), collapse = ', ')
+      output$statut_data_gaules <- renderText({
+        HTML("<b>Les colonnes suivantes sont manquantes :</b>")
+      })
+      output$error_data_gaules <- renderText({
+        HTML(paste("<span style='color:red;'>", list_string_gaules, "</span>"))
+      })
+    } else {
+      output$statut_data_gaules <- renderText({
+        HTML("")
+      })
+      output$error_data_gaules <- renderText({
+        HTML("")
+      })
+      
+      
+      
+      
+      
+      output$conditionalButton <- renderUI({
+        if (!is.null(input$file) && !is.na(input$Horizon) && !is.na(input$NbIter) && input$NbIter > 1) {
+          actionButton("simulateButton", "Simulation")
+        }
+      }) 
+    }
+    
+    if (length(valider_data()) != 0) {
+      list_string1 <- paste(valider_data(), collapse = ', ')
+      output$statut <- renderText({
+        HTML("<b>Les erreurs suivantes ont été détectées :</b>")
+      })
+      output$error <- renderText({
+        HTML(paste("<span style='color:red;'>", list_string1, "</span>"))
+      })
+    } else {
+      output$statut <- renderText({
+        HTML("")
+      })
+      output$error <- renderText({
+        HTML("")
+      })
+      
+      
+      
+      
+      
+      output$conditionalButton <- renderUI({
+        if (!is.null(input$file) && !is.na(input$Horizon) && !is.na(input$NbIter) && input$NbIter > 1) {
+          actionButton("simulateButton", "Simulation")
+        }
+      }) 
+    }
+    
+    
+    
+
+  })
+
   
   
   observe({
@@ -183,9 +295,9 @@ server <- function(input, output,session) {
     input$NbIter
    
     output$conditionalButton <- renderUI({
-      if (!is.null(input$file)  && !is.na(input$Horizon) && !is.na(input$NbIter) && input$NbIter > 1 && input$RecruesGaules ==0 && length(processed_absent()) == 0) {
+      if (!is.null(input$file)  && !is.na(input$Horizon) && !is.na(input$NbIter) && input$NbIter > 1 && input$RecruesGaules ==0 && length(processed_absent()) == 0 && length(valider_data()) == 0) {
         actionButton("simulateButton", "Simulation")
-      }else if(!is.null(input$file)  && !is.na(input$ Horizon) && !is.na(input$NbIter) && input$NbIter > 1 && input$RecruesGaules ==1 && !is.null(input$gauleFile) && length(processed_absent()) == 0){
+      }else if(!is.null(input$file)  && !is.na(input$ Horizon) && !is.na(input$NbIter) && input$NbIter > 1 && input$RecruesGaules ==1 && !is.null(input$gauleFile) && length(processed_absent()) == 0 && length(valider_data()) == 0){
         
         actionButton("simulateButton", "Simulation")
       }
@@ -224,12 +336,7 @@ server <- function(input, output,session) {
         if (input$RecruesGaules == 1) {
           # # Vérifier si un fichier Gaule a été téléchargé
           
-          gaule_data <- reactive({
-            req(input$gauleFile)
-            # read.csv(input$gauleFile$datapath, sep  = ";")
-            read_delim(input$gauleFile$datapath, delim   = ";")
-            
-          })
+         
           processed_Simul(SimulSaMARE(NbIter=input$NbIter,AnneeDep = 0, Horizon= (input$Horizon/5),RecruesGaules= input$RecruesGaules, Data = data(), Gaules=gaule_data() ))
         } else {
           processed_Simul(SimulSaMARE(NbIter=input$NbIter,AnneeDep = 0, Horizon= (input$Horizon/5),RecruesGaules= input$RecruesGaules, Data = data()))
