@@ -386,10 +386,10 @@ server <- function(input, output,session) {
     
     })
 
-    # output$dynamic_mainpanel <- renderUI({
-    # 
-    #   plotOutput("plot")
-    # })
+    output$dynamic_mainpanel <- renderUI({
+
+      plotOutput("plot")
+    })
     
     simulation_status("Simulation terminée. Vous pouvez maintenant télécharger le résultat.")
     
