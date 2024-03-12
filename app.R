@@ -28,7 +28,9 @@ ui <- fluidPage(
                                # titlePanel("Samare"),
 
                                 titlePanel(img(src = "SaMARE_MRNF_Final.jpg", height = 150, width = 270)),
-                               
+                          #helpText("Version 2.1.0"),
+                          tags$div(style = "font-size: 10px;", "Version 2.1.0"),
+                        #  HTML("<small>Version 2.1.0"),
                                 sidebarLayout(
 
                                   uiOutput("dynamic_sidebar"),
@@ -36,6 +38,9 @@ ui <- fluidPage(
                                   mainPanel(
                                     uiOutput("dynamic_mainpanel"),
                                     #tableOutput("table")
+                                    
+                                    
+                                    
                                   )
                                 )
                             )
@@ -102,7 +107,7 @@ server <- function(input, output,session) {
       htmlOutput("statut_data"),
       htmlOutput("error_data"),
       numericInput("Horizon", "Nombre d'années de simulation ( multiple de 5)",min = 0 ,value = NA, step = 5),
-      radioButtons("RecruesGaules", "Recrues gaules",
+      radioButtons("RecruesGaules", "Recrutement Basé sur les gaules",
                    choices = list("Oui" = 1, "Non" = 0),
                    selected = 0),
       conditionalPanel(
@@ -112,22 +117,14 @@ server <- function(input, output,session) {
       htmlOutput("statut_data_gaules"),
       htmlOutput("error_data_gaules"),
       numericInput("NbIter", "Nombre d'itérations", min = 2,value = NA),
-      radioButtons("Billonnage", "Billonnage ?",
-                   choices = list("Oui" = "1", "Non" = "0"), # Notez les valeurs comme des chaînes de caractères
-                   selected = "0"),
+     
       
-      conditionalPanel(
-        condition = "input.Billonnage === '1'", # Assurez-vous que la condition utilise une chaîne de caractères
-        radioButtons("typeBillonnage", "Type de Billonnage :",
-                     choices = list("DHP" = "DHP", "ABCD" = "ABCD", "1234" = "1234", "MSCR" = "MSCR"),
-                     selected = "DHP")
-      ),
       uiOutput("conditionalButton")
     )
   
   })
   output$dynamic_mainpanel <- renderUI({
-    
+
     tableOutput("table")
   })
   # Lire le fichier CSV avec un point-virgule comme délimiteur
@@ -155,9 +152,9 @@ server <- function(input, output,session) {
   valider_data <- reactiveVal(NULL)
   valider_data_gaules <- reactiveVal(NULL)
   processed_Billonage <- reactiveVal(NULL)
-  reponse_bio<- reactiveVal(NULL)
   graph_to_print <- reactiveVal(NULL)
   graph<- reactiveVal(NULL)
+  vevifier_meteo<- reactiveVal(NULL)
   
   observeEvent(input$file, {
     
@@ -324,7 +321,8 @@ server <- function(input, output,session) {
   
   observeEvent(input$simulateButton, {
     simulation_status("Simulation en cours...")
-
+   
+    vevifier_meteo(vevifier_variable_meteo(data()))
     output$dynamic_sidebar <- renderUI({
     sidebarPanel(
       h3("Simulation en cours..."),
@@ -337,16 +335,12 @@ server <- function(input, output,session) {
           # # Vérifier si un fichier Gaule a été téléchargé
           
          
-          processed_Simul(SimulSaMARE(NbIter=input$NbIter,AnneeDep = 0, Horizon= (input$Horizon/5),RecruesGaules= input$RecruesGaules, Data = data(), Gaules=gaule_data() ))
+          processed_Simul(SimulSaMARE(NbIter=input$NbIter,AnneeDep = 0, Horizon= (input$Horizon/5),RecruesGaules= input$RecruesGaules, Data = vevifier_meteo(), Gaules=gaule_data() ))
         } else {
-          processed_Simul(SimulSaMARE(NbIter=input$NbIter,AnneeDep = 0, Horizon= (input$Horizon/5),RecruesGaules= input$RecruesGaules, Data = data()))
+          processed_Simul(SimulSaMARE(NbIter=input$NbIter,AnneeDep = 0, Horizon= (input$Horizon/5),RecruesGaules= input$RecruesGaules, Data = vevifier_meteo()))
         } 
         
-        if(input$Billonnage == '1' && !is.null(input$Billonnage)) {
-          req(input$typeBillonnage)
-          processed_Billonage(SIMBillonnageABCD_DHP(data= processed_Simul(), type = input$typeBillonnage))
-        }
-        reponse_bio(input$Billonnage)
+        
         Sys.sleep(5) 
         
        
@@ -368,27 +362,44 @@ server <- function(input, output,session) {
         
         textOutput("simulationStatus"),
         tags$br(),
-        selectInput("Espece", "Groupe d'espece", choices = c("" )),
-        selectInput("variable", "choix de la variable", choices = c("ST_HA", "Vol_HA", "DQM","HDomM", "nbTi_HA")),
-        downloadButton("downloadPlot", "Télécharger le Graphique"),
-        tags$br(),
         radioButtons("graphType", "Type de graphique à créer:",
                      choices = list("Évolution des variables" ,
                                     "Distribution diamétrale" )),
         tags$br(),
-        radioButtons("simplifier", "Synthétiser ?",
-                     choices = list("Oui" = TRUE, "Non" = FALSE),
+        selectInput("Espece", "Groupe d'espece", choices = c("" )),
+        selectInput("variable", "choix de la variable", choices = c("ST_HA", "Vol_HA", "DQM","HDomM", "nbTi_HA")),
+        downloadButton("downloadPlot", "Télécharger le Graphique"),
+        tags$br(),
+        radioButtons("simplifier", "Toutes les années de simulation ?",
+                     choices = list("Oui" = FALSE, "Non" = TRUE),
                      selected = FALSE),
-        selectInput("Sortie", "Type de sortie", choices = c("Sélectionner" = "")),
-        downloadButton("download", "Télécharger le résultat")
+        selectInput("Sortie",
+                    label = "Choisis la sortie",
+                    choices = c("Arbre par itération", "sommaire dendrometrique par itération", "sommaire dendrometrique par placcette", "à l'échelle du billon"=1)
+      ),
+      conditionalPanel(
+        condition = "input.Sortie == 1", 
+        selectInput("typeBillonnage", "Type de Billonnage :",
+                     choices = list("DHP" = "DHP", "ABCD" = "ABCD", "1234" = "1234", "MSCR" = "MSCR")
+                    )
+      ),
+        downloadButton("download", "Télécharger le résultat"),
+      tags$br(),
+      actionButton("reset_button", "Réinitialiser"),
         
       )
     
     })
 
     output$dynamic_mainpanel <- renderUI({
-
-      plotOutput("plot")
+      
+     
+       
+        tabsetPanel(type = "tabs",
+                    tabPanel("Graphique", plotOutput("plot")),
+                    tabPanel("Table", tableOutput("table"))
+        )
+      
     })
     
     simulation_status("Simulation terminée. Vous pouvez maintenant télécharger le résultat.")
@@ -430,23 +441,46 @@ server <- function(input, output,session) {
                        choices = listeEspece2 )
   })
   
-  observe({
-    req(reponse_bio())
-    if(reponse_bio() == '1' ) {
-
-      updateSelectInput( session = session,
-                         inputId = "Sortie",
-                         label = "Choisis le sortie",
-                         choices = c("Arbre par itération", "sommaire dendrometrique par itération", "sommaire dendrometrique par placcette", "à l'échelle du billon"))
-    } else {
-      # Optionnel: réinitialiser les choix ou ajuster selon les besoins
-      updateSelectInput(session = session,
-                        inputId = "Sortie",
-                        label = "Choisis le sortie",
-                        choices = c("Arbre par itération", "sommaire dendrometrique par itération", "sommaire dendrometrique par placcette"))
-    }
+  observeEvent(input$reset_button, {
+    processed_Simul<- reactiveVal(NULL)
+    data<-reactiveVal(NULL)
+    
+    output$dynamic_mainpanel <- renderUI({
+      
+      tableOutput("table")
+    })
+    
+    output$dynamic_sidebar <- renderUI({
+      
+      sidebarPanel(
+        fileInput("file", "Choisissez un fichier CSV"),
+        htmlOutput("statut"),
+        htmlOutput("error"),
+        htmlOutput("statut_data"),
+        htmlOutput("error_data"),
+        numericInput("Horizon", "Nombre d'années de simulation ( multiple de 5)",min = 0 ,value = NA, step = 5),
+        radioButtons("RecruesGaules", "Recrutement Basé sur les gaules",
+                     choices = list("Oui" = 1, "Non" = 0),
+                     selected = 0),
+        conditionalPanel(
+          condition = "input.RecruesGaules == 1",
+          fileInput("gauleFile", "Fichier Gaule doit être téléchargé avant la simulation")
+        ),
+        htmlOutput("statut_data_gaules"),
+        htmlOutput("error_data_gaules"),
+        numericInput("NbIter", "Nombre d'itérations", min = 2,value = NA),
+        
+        
+        uiOutput("conditionalButton")
+      )
+    
+      
+    })
+    
+    
+    
+    
   })
-  #   
   #   
   #   observeEvent(input$typeBillonnage,{
   #     if(input$Billonnage == '1' && !is.null(input$Billonnage)) {
@@ -460,8 +494,14 @@ server <- function(input, output,session) {
   
   observe({
     # Assignation directe pour simplifier la lecture
+    req(input$Sortie)
     sortie <- input$Sortie
     simplifier <- input$simplifier
+    
+    if(input$Sortie == "à l'échelle du billon" && !is.null(input$Sortie)) {
+      req(input$typeBillonnage)
+      processed_Billonage(SIMBillonnageABCD_DHP(data= processed_data_htvol(), type = input$typeBillonnage))
+    }
     
     # Vérifie si sortie est NULL ou non défini. Si oui, sortez de la fonction observe.
     # Ceci prévient l'exécution de switch avec une expression non valide.
@@ -495,7 +535,7 @@ server <- function(input, output,session) {
   # Afficher le contenu du fichier CSV dans un tableau
   output$table <- renderTable({
     if (is.null(processed_Simul()) && is.null(data()) ){
-      data()
+      NULL
     } else if(is.null(processed_Simul())){
       data()
       }else{
