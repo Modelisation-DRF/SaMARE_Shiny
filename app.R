@@ -49,8 +49,8 @@ ui <- fluidPage(
                       div(id = "help_page",
                           h2("Page d'Aide"),
                           p("Pour information contacter :"),
-                          p("Hugues Power - hugues.power@mrnf.gouv.qc.ca"),
-                          p("Filip Havreljuk - Filip.Havreljuk@mrnf.gouv.qc.ca"),
+                          p("recherche forestière - recherche.forestiere@mrnf.gouv.qc.ca"),
+                          downloadButton("downloadPDF", "Télécharger le PDF")
                         
                       )
              )
@@ -123,10 +123,7 @@ server <- function(input, output,session) {
     )
   
   })
-  output$dynamic_mainpanel <- renderUI({
 
-    tableOutput("table")
-  })
   # Lire le fichier CSV avec un point-virgule comme délimiteur
   data <- reactive({
     req(input$file)
@@ -158,6 +155,10 @@ server <- function(input, output,session) {
   
   observeEvent(input$file, {
     
+    output$dynamic_mainpanel <- renderUI({
+      
+      tableOutput("table")
+    })
     processed_absent(trouver_noms_absents(data()))
     valider_data(valide_data(data()))
     
@@ -335,9 +336,9 @@ server <- function(input, output,session) {
           # # Vérifier si un fichier Gaule a été téléchargé
           
          
-          processed_Simul(SimulSaMARE(NbIter=input$NbIter,AnneeDep = 0, Horizon= (input$Horizon/5),RecruesGaules= input$RecruesGaules, Data = vevifier_meteo(), Gaules=gaule_data() ))
+          processed_Simul(SimulSaMARE(NbIter=input$NbIter, Horizon= (input$Horizon/5),RecruesGaules= input$RecruesGaules, Data = vevifier_meteo(), Gaules=gaule_data() ))
         } else {
-          processed_Simul(SimulSaMARE(NbIter=input$NbIter,AnneeDep = 0, Horizon= (input$Horizon/5),RecruesGaules= input$RecruesGaules, Data = vevifier_meteo()))
+          processed_Simul(SimulSaMARE(NbIter=input$NbIter, Horizon= (input$Horizon/5),RecruesGaules= input$RecruesGaules, Data = vevifier_meteo()))
         } 
         
         
@@ -370,20 +371,22 @@ server <- function(input, output,session) {
         selectInput("variable", "choix de la variable", choices = c("ST_HA", "Vol_HA", "DQM","HDomM", "nbTi_HA")),
         downloadButton("downloadPlot", "Télécharger le Graphique"),
         tags$br(),
-        radioButtons("simplifier", "Toutes les années de simulation ?",
+        tags$br(),
+        radioButtons("simplifier", "Toutes les années de simulation",
                      choices = list("Oui" = FALSE, "Non" = TRUE),
                      selected = FALSE),
         selectInput("Sortie",
                     label = "Choisis la sortie",
-                    choices = c("Arbre par itération", "sommaire dendrometrique par itération", "sommaire dendrometrique par placcette", "à l'échelle du billon"=1)
+                    choices = c("Arbre par itération" = "arbre", "sommaire dendrometrique par itération" = "itera", "sommaire dendrometrique par placcette" = "placette", "à l'échelle du billon"="billon")
       ),
       conditionalPanel(
-        condition = "input.Sortie == 1", 
+        condition = "input.Sortie == 'billon'", 
         selectInput("typeBillonnage", "Type de Billonnage :",
-                     choices = list("DHP" = "DHP", "ABCD" = "ABCD", "1234" = "1234", "MSCR" = "MSCR")
+                     choices = list("DHP_Régionalisé" = "DHP", "ABCD_Régionalisé" = "ABCD", "1234_2015" = "1234", "MSCR_2015" = "MSCR","DHP_2015" = "DHP2015", "ABCD_2015" = "ABCD2015")
                     )
       ),
         downloadButton("download", "Télécharger le résultat"),
+      tags$br(),
       tags$br(),
       actionButton("reset_button", "Réinitialiser"),
         
@@ -441,15 +444,26 @@ server <- function(input, output,session) {
                        choices = listeEspece2 )
   })
   
+  
   observeEvent(input$reset_button, {
-    processed_Simul<- reactiveVal(NULL)
-    data<-reactiveVal(NULL)
-    
+    # Afficher la boîte de dialogue modale pour confirmation
+    showModal(modalDialog(
+      title = "Confirmation",
+      "Êtes-vous sûr de vouloir réinitialiser ?",
+      footer = tagList(
+        modalButton("Annuler"),
+        actionButton("confirm_reset", "Confirmer", class = "btn-primary")
+      )
+    ))
+  })
+  
+  
+  
+  observeEvent(input$confirm_reset, {
+    removeModal()
     output$dynamic_mainpanel <- renderUI({
-      
-      tableOutput("table")
+     NULL
     })
-    
     output$dynamic_sidebar <- renderUI({
       
       sidebarPanel(
@@ -491,36 +505,45 @@ server <- function(input, output,session) {
   #   
   # })
 
+  observeEvent(input$Sortie,{
+    
+    if(input$Sortie == "billon" && !is.null(input$Sortie)) {
+      req(input$typeBillonnage)
+      processed_Billonage(SIMBillonnageABCD_DHP(data= processed_data_htvol(), type = input$typeBillonnage))
+    }
+  })
+  
+  observeEvent(input$typeBillonnage,{
+    if(input$Sortie == "billon" && !is.null(input$Sortie)) {
+      processed_Billonage(SIMBillonnageABCD_DHP(data= processed_data_htvol(), type = input$typeBillonnage))
+    }
+  })
   
   observe({
-    # Assignation directe pour simplifier la lecture
+    
+    
     req(input$Sortie)
     sortie <- input$Sortie
     simplifier <- input$simplifier
     
-    if(input$Sortie == "à l'échelle du billon" && !is.null(input$Sortie)) {
-      req(input$typeBillonnage)
-      processed_Billonage(SIMBillonnageABCD_DHP(data= processed_data_htvol(), type = input$typeBillonnage))
-    }
     
-    # Vérifie si sortie est NULL ou non défini. Si oui, sortez de la fonction observe.
-    # Ceci prévient l'exécution de switch avec une expression non valide.
+  
     if(is.null(sortie) || sortie == ""){
       return()
     }
     
     # Exécution de switch avec une valeur valide de sortie
     switch(sortie,
-           "Arbre par itération" = {
+           "arbre" = {
              processed_Simul(SortieArbreSamare(SimulHtVol = processed_data_htvol(), simplifier = simplifier))
            },
-           "sommaire dendrometrique par placcette" = {
+           "placette" = {
              processed_Simul(SortieDendroSamare(SimulHtVol = processed_data_htvol(), simplifier = simplifier))
            },
-           "à l'échelle du billon" = {
+           "billon" = {
              processed_Simul(processed_Billonage())
            },
-           "sommaire dendrometrique par itération" = {
+           "itera" = {
              processed_Simul(SortieDendroIterSamare(SimulHtVol = processed_data_htvol(), simplifier = simplifier))
            },
          
@@ -535,7 +558,7 @@ server <- function(input, output,session) {
   # Afficher le contenu du fichier CSV dans un tableau
   output$table <- renderTable({
     if (is.null(processed_Simul()) && is.null(data()) ){
-      NULL
+      return()
     } else if(is.null(processed_Simul())){
       data()
       }else{
@@ -577,15 +600,14 @@ server <- function(input, output,session) {
     simulation_status()
   })
   
-  # observeEvent(input$help_btn, {
-  #   hide("main_app")  
-  #   show("help_page")  
-  # })
-  # 
-  # observeEvent(input$back_btn, {
-  #   show("main_app")  
-  #   hide("help_page")  
-  # })
+  output$downloadPDF <- downloadHandler(
+    filename = function() {
+      "test.pdf"
+    },
+    content = function(file) {
+      file.copy("WWW/SuiviHoraireVariable_janvier_Junior_Peumi.pdf", file)
+    }
+  )
   
   observeEvent(input$help_btn, {
     updateNavbarPage(session, "all_pages", selected = "Aide")
