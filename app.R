@@ -10,7 +10,8 @@
 library(shiny)
 library(readr)
 library(shinyjs)
-
+library(SimulateurSaMARE )
+library(Billonage)
 # Define UI for application that draws a histogram
 
 ui <- fluidPage(
@@ -117,7 +118,9 @@ server <- function(input, output,session) {
       htmlOutput("statut_data_gaules"),
       htmlOutput("error_data_gaules"),
       numericInput("NbIter", "Nombre d'itérations", min = 2,value = NA),
-     
+      radioButtons("corticale", "maladie corticale du hêtre",
+                   choices = list("Oui" = 1, "Non" = 0),
+                   selected = 0),
       
       uiOutput("conditionalButton")
     )
@@ -336,9 +339,9 @@ server <- function(input, output,session) {
           # # Vérifier si un fichier Gaule a été téléchargé
           
          
-          processed_Simul(SimulSaMARE(NbIter=input$NbIter, Horizon= (input$Horizon/5),RecruesGaules= input$RecruesGaules, Data = vevifier_meteo(), Gaules=gaule_data() ))
+          processed_Simul(SimulSaMARE(NbIter=input$NbIter, Horizon= (input$Horizon/5),RecruesGaules= input$RecruesGaules, Data = vevifier_meteo(), Gaules=gaule_data() , MCH = input$corticale))
         } else {
-          processed_Simul(SimulSaMARE(NbIter=input$NbIter, Horizon= (input$Horizon/5),RecruesGaules= input$RecruesGaules, Data = vevifier_meteo()))
+          processed_Simul(SimulSaMARE(NbIter=input$NbIter, Horizon= (input$Horizon/5),RecruesGaules= input$RecruesGaules, Data = vevifier_meteo(), MCH = input$corticale))
         } 
         
         
@@ -483,7 +486,9 @@ server <- function(input, output,session) {
         htmlOutput("statut_data_gaules"),
         htmlOutput("error_data_gaules"),
         numericInput("NbIter", "Nombre d'itérations", min = 2,value = NA),
-        
+        radioButtons("corticale", "maladie corticale du hêtre",
+                     choices = list("Oui" = 1, "Non" = 0),
+                     selected = 0),
         
         uiOutput("conditionalButton")
       )
