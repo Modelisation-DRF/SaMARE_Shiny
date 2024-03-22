@@ -402,8 +402,7 @@ server <- function(input, output,session) {
      
        
         tabsetPanel(type = "tabs",
-                    tabPanel("Graphique", plotOutput("plot")),
-                    tabPanel("Table", tableOutput("table"))
+                    tabPanel("Graphique", plotOutput("plot"))
         )
       
     })
@@ -463,6 +462,21 @@ server <- function(input, output,session) {
   
   
   observeEvent(input$confirm_reset, {
+    
+    processed_Simul(NULL)
+    processed_data_ArbreSamare(NULL)
+    processed_data_DendroSamare(NULL)
+    processed_data_DendroIterSamare(NULL)
+    processed_data_htvol(NULL)
+    processed_absent(NULL)
+    processed_absent_gaules(NULL)
+    valider_data(NULL)
+    valider_data_gaules(NULL)
+    processed_Billonage(NULL)
+    graph_to_print(NULL)
+    graph(NULL)
+    vevifier_meteo(NULL)
+    
     removeModal()
     output$dynamic_mainpanel <- renderUI({
      NULL
@@ -534,6 +548,8 @@ server <- function(input, output,session) {
     
   
     if(is.null(sortie) || sortie == ""){
+      return()
+    }else if(is.null(processed_data_htvol())){
       return()
     }
     
