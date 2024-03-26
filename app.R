@@ -13,6 +13,7 @@ library(shinyjs)
 library(SimulateurSaMARE )
 library(Billonage)
 library(ExtractMap)
+library(sf)
 # Define UI for application that draws a histogram
 
 ui <- fluidPage(
