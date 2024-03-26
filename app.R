@@ -12,6 +12,7 @@ library(readr)
 library(shinyjs)
 library(SimulateurSaMARE )
 library(Billonage)
+library(ExtractMap)
 # Define UI for application that draws a histogram
 
 ui <- fluidPage(
@@ -57,43 +58,6 @@ ui <- fluidPage(
              )
   )
 )
-
-# 
-# ui <- fluidPage(
-#   tags$head(
-#     tags$style(HTML("
-#       .sidebar {
-#         background-color: #00FF00; /* Vert lumineux comme exemple */
-#       }
-#     "))
-#   ),
-#   useShinyjs(),  # Initialise shinyjs
-#   div(id = "main_app",  # Div pour l'application principale
-#      # titlePanel("Samare"),
-# 
-#       titlePanel(img(src = "SaMARE_MRNF_Final.jpg", height = 150, width = 270)),
-#      actionButton("help_btn", "Aide"),
-#       sidebarLayout(
-#         
-#         uiOutput("dynamic_sidebar"),
-#         # Afficher le contenu du fichier CSV dans un tableau
-#         mainPanel(
-#           uiOutput("dynamic_mainpanel"),
-#           #tableOutput("table")
-#         )
-#       )
-#   ),
-#   hidden(  # Cache la page d'aide par défaut
-#     div(id = "help_page",  # Div pour la page d'aide
-#         h2("Page d'Aide"),
-#         p("Pour information contacter :"),
-#         p("Hugues Power - hugues.power@mrnf.gouv.qc.ca"),
-#         p("Filip Havreljuk - Filip.Havreljuk@mrnf.gouv.qc.ca"),
-#         actionButton("back_btn", "Retour")
-#     )
-#   )
-#  
-# )
 
 
 # Définir le serveur
@@ -476,7 +440,6 @@ server <- function(input, output,session) {
     graph_to_print(NULL)
     graph(NULL)
     vevifier_meteo(NULL)
-    
     removeModal()
     output$dynamic_mainpanel <- renderUI({
      NULL
@@ -578,13 +541,7 @@ server <- function(input, output,session) {
   
   # Afficher le contenu du fichier CSV dans un tableau
   output$table <- renderTable({
-    if (is.null(processed_Simul()) && is.null(data()) ){
-      return()
-    } else if(is.null(processed_Simul())){
-      data()
-      }else{
-      processed_Simul()
-    }
+      data()[1:20,]
   })
   
   # Télécharger le résultat après simulation 
@@ -639,5 +596,61 @@ server <- function(input, output,session) {
   })
 }
 
+vevifier_variable_meteo <- function(data){
+  
+  select=dplyr::select
+  
+  data <- data %>%
+    rename(id_pe = Placette, latitude = Latitude, longitude = Longitude)
+  
+  
+  mes_variables <- c('GrwDays', 'Ptot', 'Tmoy')
+  fonctions_validation <- list(valide_GrwDays, valide_Ptot, valide_Tmoy)
+  noms_remplacement <- c("growingseasonlength", "totalprecipitation", "tmean")
+  
+  
+  for (i in seq_along(mes_variables)) {
+    if (mes_variables[i] %in% names(data) && !fonctions_validation[[i]](data)) {
+      data <- select(data, -!!rlang::sym(mes_variables[i]))
+    }
+  }
+  
+  
+  variables_presentes <- intersect(mes_variables, names(data))
+  for (col_names in variables_presentes) {
+    if (!length(unique(data[[col_names]])) == 1) {
+      data <- select(data, -!!rlang::sym(col_names))
+    }
+  }
+  
+  
+  map_noms_variables <- c(GrwDays = "growingseasonlength",
+                          Ptot = "totalprecipitation",
+                          Tmoy = "tmean")
+  
+  variables_non_trouvees <- setdiff(mes_variables, names(data))
+  
+  if(!is_empty(variables_non_trouvees)){
+    variables_a_extraire <- map_noms_variables[variables_non_trouvees]
+    
+    data <- extract_map_plot(file=data, liste_raster="cartes_climat", variable=variables_a_extraire)
+    
+    if('tmean' %in% variables_a_extraire) {
+      data <- rename(data, Tmoy = tmean)
+    }
+    
+    if('totalprecipitation' %in% variables_a_extraire) {
+      data <- rename(data, Ptot = totalprecipitation)
+    }
+    
+    if('growingseasonlength' %in% variables_a_extraire) {
+      data <- rename(data, GrwDays = growingseasonlength)
+    }
+  }
+  
+  data<-data %>% rename(Placette=id_pe)
+  
+  return (data)
+}
 # Run the application 
 shinyApp(ui = ui, server = server)
