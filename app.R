@@ -75,7 +75,8 @@ server <- function(input, output,session) {
       numericInput("Horizon", "Nombre d'années de simulation ( multiple de 5)",min = 0 ,value = NA, step = 5),
       radioButtons("RecruesGaules", "Recrutement Basé sur les gaules",
                    choices = list("Oui" = 1, "Non" = 0),
-                   selected = 0),
+                   selected = 0,
+                   inline = TRUE),
       conditionalPanel(
         condition = "input.RecruesGaules == 1",
         fileInput("gauleFile", "Fichier Gaule doit être téléchargé avant la simulation")
@@ -85,7 +86,8 @@ server <- function(input, output,session) {
       numericInput("NbIter", "Nombre d'itérations", min = 2,value = NA),
       radioButtons("corticale", "maladie corticale du hêtre",
                    choices = list("Oui" = 1, "Non" = 0),
-                   selected = 0),
+                   selected = 0,
+                   inline = TRUE),
       
       uiOutput("conditionalButton")
     )
@@ -327,6 +329,14 @@ server <- function(input, output,session) {
     
     
     output$dynamic_sidebar <- renderUI({
+      tags$head(
+        tags$style(HTML("
+        .shiny-input-radiogroup .radio {
+          display: inline-block;
+          margin-right: 20px;
+        }
+      "))
+      )
       sidebarPanel(
         
         textOutput("simulationStatus"),
@@ -342,11 +352,15 @@ server <- function(input, output,session) {
         tags$br(),
         radioButtons("simplifier", "Toutes les années de simulation",
                      choices = list("Oui" = FALSE, "Non" = TRUE),
-                     selected = FALSE),
+                     selected = FALSE,
+                     inline = TRUE),
+        tags$br(),
         selectInput("Sortie",
                     label = "Choisis la sortie",
                     choices = c("Arbre par itération" = "arbre", "sommaire dendrometrique par itération" = "itera", "sommaire dendrometrique par placcette" = "placette", "à l'échelle du billon"="billon")
       ),
+      tags$br(),
+      
       conditionalPanel(
         condition = "input.Sortie == 'billon'", 
         selectInput("typeBillonnage", "Type de Billonnage :",
@@ -456,7 +470,8 @@ server <- function(input, output,session) {
         numericInput("Horizon", "Nombre d'années de simulation ( multiple de 5)",min = 0 ,value = NA, step = 5),
         radioButtons("RecruesGaules", "Recrutement Basé sur les gaules",
                      choices = list("Oui" = 1, "Non" = 0),
-                     selected = 0),
+                     selected = 0,
+                     inline = TRUE),
         conditionalPanel(
           condition = "input.RecruesGaules == 1",
           fileInput("gauleFile", "Fichier Gaule doit être téléchargé avant la simulation")
@@ -466,7 +481,8 @@ server <- function(input, output,session) {
         numericInput("NbIter", "Nombre d'itérations", min = 2,value = NA),
         radioButtons("corticale", "maladie corticale du hêtre",
                      choices = list("Oui" = 1, "Non" = 0),
-                     selected = 0),
+                     selected = 0,
+                     inline = TRUE),
         
         uiOutput("conditionalButton")
       )
