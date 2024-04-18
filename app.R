@@ -25,12 +25,12 @@ ui <- fluidPage(
       }
     "))
   ),
-  navbarPage("Application", id = "all_pages",
-             tabPanel("Main",
+  navbarPage("", id = "all_pages",
+             tabPanel(img(src = "SaMARE_MRNF_Final.jpg", height = 50, width = 70),
                       div(id = "main_app",  # Div pour l'application principale
                                # titlePanel("Samare"),
 
-                                titlePanel(img(src = "SaMARE_MRNF_Final.jpg", height = 150, width = 270)),
+                                #titlePanel(img(src = "SaMARE_MRNF_Final.jpg", height = 150, width = 270)),
                           #helpText("Version 2.1.0"),
                           tags$div(style = "font-size: 10px;", "Version 2.1.0"),
                         #  HTML("<small>Version 2.1.0"),
@@ -45,10 +45,23 @@ ui <- fluidPage(
                                     
                                     
                                   )
-                                )
+                                ),
+                        # div(
+                        #   tags$button(
+                        #     id = 'close',
+                        #     type = "button",
+                        #     class = "btn action-button",
+                        #     icon("close"),
+                        #     onclick = "setTimeout(function(){window.close();},500);",
+                        #     style = "color: #fff; background-color: #337ab7; border-color: #2e6da4",
+                        #     "Fermer l'application"
+                        #   ),
+                        #   style = "margin-top: 20px;"
+                        # )
+                        
                             )
              ),
-             tabPanel("Aide",
+             tabPanel(img(src = "Aide.jpg", height = 50, width = 70),
                       div(id = "help_page",
                           h2("Page d'Aide"),
                           p("Pour information contacter :"),
@@ -63,23 +76,48 @@ ui <- fluidPage(
 
 # Définir le serveur
 server <- function(input, output,session) {
+  
+  # stopSimulation <- function() {
+  #   
+  #   system("taskkill /f /im R.exe")
+  #   system("taskkill /f /im Rterm.exe")
+  # }
  
   output$dynamic_sidebar <- renderUI({
      
     sidebarPanel(
-      fileInput("file", "Choisissez un fichier CSV"),
+      
+      fileInput( 
+      inputId="file",
+      label="Choisissez un fichier CSV",
+      multiple = FALSE,
+      accept = NULL,
+      width = NULL,
+      buttonLabel = "Parcourir",
+      placeholder = "Aucun fichier sélectioné",
+      capture = NULL),
+      
       htmlOutput("statut"),
       htmlOutput("error"),
       htmlOutput("statut_data"),
       htmlOutput("error_data"),
-      numericInput("Horizon", "Nombre d'années de simulation ( multiple de 5)",min = 0 ,value = NA, step = 5),
+      numericInput("Horizon", "Nombre d'années de simulation (multiple de 5)",min = 0 ,value = NA, step = 5),
       radioButtons("RecruesGaules", "Recrutement Basé sur les gaules",
                    choices = list("Oui" = 1, "Non" = 0),
                    selected = 0,
                    inline = TRUE),
       conditionalPanel(
         condition = "input.RecruesGaules == 1",
-        fileInput("gauleFile", "Fichier Gaule doit être téléchargé avant la simulation")
+       
+        fileInput( 
+          inputId="gauleFile",
+          label="Fichier Gaule doit être téléchargé avant la simulation",
+          multiple = FALSE,
+          accept = NULL,
+          width = NULL,
+          buttonLabel = "Parcourir",
+          placeholder = "Aucun fichier sélectioné",
+          capture = NULL)
       ),
       htmlOutput("statut_data_gaules"),
       htmlOutput("error_data_gaules"),
@@ -93,7 +131,6 @@ server <- function(input, output,session) {
     )
   
   })
-
   # Lire le fichier CSV avec un point-virgule comme délimiteur
   data <- reactive({
     req(input$file)
@@ -129,7 +166,7 @@ server <- function(input, output,session) {
       
       tableOutput("table")
     })
-    processed_absent(trouver_noms_absents(data()))
+     processed_absent(trouver_noms_absents(data()))
     valider_data(valide_data(data()))
     
     if (length(processed_absent()) != 0) {
@@ -254,7 +291,18 @@ server <- function(input, output,session) {
 
   })
 
+  # observe({
+  #   if (input$close > 0) {
+  #     # Ferme toutes les session de R
+  #     stopSimulation()
+  #     # Arrete la shiny
+  #     stopApp()
+  #   }
+  # })
   
+  # session$onSessionEnded(function() {
+  #   stopSimulation()
+  # })
   
   observe({
     # Réagir aux changements dans les inputs
@@ -346,7 +394,7 @@ server <- function(input, output,session) {
                                     "Distribution diamétrale" )),
         tags$br(),
         selectInput("Espece", "Groupe d'espece", choices = c("" )),
-        selectInput("variable", "choix de la variable", choices = c("ST_HA", "Vol_HA", "DQM","HDomM", "nbTi_HA")),
+        selectInput("variable", "Choix de la variable", choices = c("ST_HA", "Vol_HA", "DQM","HDomM", "nbTi_HA")),
         downloadButton("downloadPlot", "Télécharger le Graphique"),
         tags$br(),
         tags$br(),
@@ -357,7 +405,7 @@ server <- function(input, output,session) {
         tags$br(),
         selectInput("Sortie",
                     label = "Choisis la sortie",
-                    choices = c("Arbre par itération" = "arbre", "sommaire dendrometrique par itération" = "itera", "sommaire dendrometrique par placcette" = "placette", "à l'échelle du billon"="billon")
+                    choices = c("Arbre par itération" = "arbre", "sommaire dendrometrique par itération" = "itera", "sommaire dendrometrique par placette" = "placette", "à l'échelle du billon"="billon")
       ),
       tags$br(),
       
@@ -462,19 +510,35 @@ server <- function(input, output,session) {
     output$dynamic_sidebar <- renderUI({
       
       sidebarPanel(
-        fileInput("file", "Choisissez un fichier CSV"),
+        fileInput( 
+          inputId="file",
+          label="Choisissez un fichier CSV",
+          multiple = FALSE,
+          accept = NULL,
+          width = NULL,
+          buttonLabel = "Parcourir",
+          placeholder = "Aucun fichier sélectioné",
+          capture = NULL),
         htmlOutput("statut"),
         htmlOutput("error"),
         htmlOutput("statut_data"),
         htmlOutput("error_data"),
-        numericInput("Horizon", "Nombre d'années de simulation ( multiple de 5)",min = 0 ,value = NA, step = 5),
+        numericInput("Horizon", "Nombre d'années de simulation (multiple de 5)",min = 0 ,value = NA, step = 5),
         radioButtons("RecruesGaules", "Recrutement Basé sur les gaules",
                      choices = list("Oui" = 1, "Non" = 0),
                      selected = 0,
                      inline = TRUE),
         conditionalPanel(
           condition = "input.RecruesGaules == 1",
-          fileInput("gauleFile", "Fichier Gaule doit être téléchargé avant la simulation")
+          fileInput( 
+            inputId="gauleFile",
+            label="Fichier Gaule doit être téléchargé avant la simulation",
+            multiple = FALSE,
+            accept = NULL,
+            width = NULL,
+            buttonLabel = "Parcourir",
+            placeholder = "Aucun fichier sélectioné",
+            capture = NULL)
         ),
         htmlOutput("statut_data_gaules"),
         htmlOutput("error_data_gaules"),
@@ -613,9 +677,12 @@ server <- function(input, output,session) {
   })
 }
 
+
+
 vevifier_variable_meteo <- function(data){
   
   select=dplyr::select
+  data<-renommer_les_colonnes(data = data)
   
   data <- data %>%
     rename(id_pe = Placette, latitude = Latitude, longitude = Longitude)
@@ -670,4 +737,14 @@ vevifier_variable_meteo <- function(data){
   return (data)
 }
 # Run the application 
-shinyApp(ui = ui, server = server)
+
+
+tryCatch({
+  shinyApp(ui, server)
+}, error = function(e) {
+ 
+  cat("ERROR: Shiny app crashed with the following message:\n")
+  print(e)
+  q()
+})
+
