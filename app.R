@@ -7,6 +7,61 @@
 #    http://shiny.rstudio.com/
 #
 
+options(repos = c(CRAN = "https://cloud.r-project.org"))
+# Vérifie si les packages nécessaires sont installés et les ajoute si besoin
+required_packages <- c("shiny", "shinyjs", "shinyFiles", "shinydashboard", "shinythemes", "mvtnorm",
+                       "tidyverse", "doFuture", "doRNG", "readxl",
+                       "sas7bdat", "miceadds", "dplyr", "reticulate", "future.apply", "rlang","sf", "rockchalk")
+for (i in required_packages) {
+  if (!require(i, character.only = TRUE)) {
+    install.packages(i, dependencies = TRUE)
+    require(i, character.only = TRUE)
+  }
+}
+
+# Installe ces packages stockés dans le dossier de la shiny (non disponibles sur le CRAN)
+Model_install <- c("TarifQC","Billonage", "SimulateurSaMARE", "ExtractMap")
+for (i in Model_install) {
+  if (!require(i, character.only = TRUE)) {
+    if (i == "TarifQC") {
+      install.packages(
+        "./Packages/TarifQC_1.1.4.tar.gz",
+        repos = NULL,
+        type = "source",
+        dependencies = TRUE
+      )
+    }
+    
+    if (i == "Billonage") {
+      install.packages(
+        "./Packages/Billonage_0.1.0.tar.gz",
+        repos = NULL,
+        type = "source",
+        dependencies = TRUE
+      )
+    }
+    if (i == "SimulateurSaMARE") {
+      install.packages(
+        "./Packages/SimulateurSaMARE_2.1.0.tar.gz",
+        repos = NULL,
+        type = "source",
+        dependencies = TRUE
+      )
+    }
+    if (i == "ExtractMap") {
+      install.packages(
+        "./Packages/ExtractMap_1.1.2.tar.gz",
+        repos = NULL,
+        type = "source",
+        dependencies = TRUE
+      )
+    }
+    require(i, character.only = TRUE)
+  }
+}
+
+
+
 library(shiny)
 library(readr)
 library(shinyjs)
@@ -46,18 +101,18 @@ ui <- fluidPage(
                                     
                                   )
                                 ),
-                        # div(
-                        #   tags$button(
-                        #     id = 'close',
-                        #     type = "button",
-                        #     class = "btn action-button",
-                        #     icon("close"),
-                        #     onclick = "setTimeout(function(){window.close();},500);",
-                        #     style = "color: #fff; background-color: #337ab7; border-color: #2e6da4",
-                        #     "Fermer l'application"
-                        #   ),
-                        #   style = "margin-top: 20px;"
-                        # )
+                        div(
+                          tags$button(
+                            id = 'close',
+                            type = "button",
+                            class = "btn action-button",
+                            icon("close"),
+                            onclick = "setTimeout(function(){window.close();},500);",
+                            style = "color: #fff; background-color: #337ab7; border-color: #2e6da4",
+                            "Fermer l'application"
+                          ),
+                          style = "margin-top: 20px;"
+                        )
                         
                             )
              ),
@@ -77,12 +132,12 @@ ui <- fluidPage(
 # Définir le serveur
 server <- function(input, output,session) {
   
-  # stopSimulation <- function() {
-  #   
-  #   system("taskkill /f /im R.exe")
-  #   system("taskkill /f /im Rterm.exe")
-  # }
- 
+  stopSimulation <- function() {
+    # ...
+    system("taskkill /f /im R.exe")
+    system("taskkill /f /im Rterm.exe")
+  }
+  
   output$dynamic_sidebar <- renderUI({
      
     sidebarPanel(
@@ -168,6 +223,7 @@ server <- function(input, output,session) {
     })
      processed_absent(trouver_noms_absents(data()))
     valider_data(valide_data(data()))
+    
     
     if (length(processed_absent()) != 0) {
       list_string <- paste(processed_absent(), collapse = ', ')
@@ -291,19 +347,7 @@ server <- function(input, output,session) {
 
   })
 
-  # observe({
-  #   if (input$close > 0) {
-  #     # Ferme toutes les session de R
-  #     stopSimulation()
-  #     # Arrete la shiny
-  #     stopApp()
-  #   }
-  # })
-  
-  # session$onSessionEnded(function() {
-  #   stopSimulation()
-  # })
-  
+
   observe({
     # Réagir aux changements dans les inputs
     input$RecruesGaules
@@ -405,14 +449,14 @@ server <- function(input, output,session) {
         tags$br(),
         selectInput("Sortie",
                     label = "Choisis la sortie",
-                    choices = c("Arbre par itération" = "arbre", "sommaire dendrometrique par itération" = "itera", "sommaire dendrometrique par placette" = "placette", "à l'échelle du billon"="billon")
+                    choices = c("Arbre par itération" = "arbre_par_iteration", "sommaire dendrometrique par itération" = "dendrometrique_par_iteration", "sommaire dendrometrique par placette" = "dendrometrique_par_placette", "à l'échelle du billon"="echelle_billon")
       ),
       tags$br(),
       
       conditionalPanel(
-        condition = "input.Sortie == 'billon'", 
+        condition = "input.Sortie == 'echelle_billon'", 
         selectInput("typeBillonnage", "Type de Billonnage :",
-                     choices = list("DHP_Régionalisé" = "DHP", "ABCD_Régionalisé" = "ABCD", "1234_2015" = "1234", "MSCR_2015" = "MSCR","DHP_2015" = "DHP2015", "ABCD_2015" = "ABCD2015")
+                     choices = list("DHP_Régionalisé" = "DHP", "ABCD_Régionalisé" = "ABCD", "1234_Provincial" = "1234", "MSCR_Provincial" = "MSCR","DHP_Provincial" = "DHP2015", "ABCD_Provincial" = "ABCD2015")
                     )
       ),
         downloadButton("download", "Télécharger le résultat"),
@@ -558,26 +602,26 @@ server <- function(input, output,session) {
     
     
   })
-  #   
-  #   observeEvent(input$typeBillonnage,{
-  #     if(input$Billonnage == '1' && !is.null(input$Billonnage)) {
-  #     processed_Billonage(SIMBillonnageABCD_DHP(data= processed_Simul(), type = input.Billonnage))
-  #     }
-  #     simulation_status(input$typeBillonnage)
-  #   })
-  #   
-  # })
+  
+  observe({
+    if (input$close > 0) {
+      # Ferme toutes les session de R
+      stopSimulation()
+      # Arrete la shiny
+      stopApp()
+    }
+  })
 
   observeEvent(input$Sortie,{
     
-    if(input$Sortie == "billon" && !is.null(input$Sortie)) {
+    if(input$Sortie == "echelle_billon" && !is.null(input$Sortie)) {
       req(input$typeBillonnage)
       processed_Billonage(SIMBillonnageABCD_DHP(data= processed_data_htvol(), type = input$typeBillonnage))
     }
   })
   
   observeEvent(input$typeBillonnage,{
-    if(input$Sortie == "billon" && !is.null(input$Sortie)) {
+    if(input$Sortie == "echelle_billon" && !is.null(input$Sortie)) {
       processed_Billonage(SIMBillonnageABCD_DHP(data= processed_data_htvol(), type = input$typeBillonnage))
     }
   })
@@ -599,16 +643,16 @@ server <- function(input, output,session) {
     
     # Exécution de switch avec une valeur valide de sortie
     switch(sortie,
-           "arbre" = {
+           "arbre_par_iteration" = {
              processed_Simul(SortieArbreSamare(SimulHtVol = processed_data_htvol(), simplifier = simplifier))
            },
-           "placette" = {
+           "dendrometrique_par_placette" = {
              processed_Simul(SortieDendroSamare(SimulHtVol = processed_data_htvol(), simplifier = simplifier))
            },
-           "billon" = {
+           "echelle_billon" = {
              processed_Simul(processed_Billonage())
            },
-           "itera" = {
+           "dendrometrique_par_iteration" = {
              processed_Simul(SortieDendroIterSamare(SimulHtVol = processed_data_htvol(), simplifier = simplifier))
            },
          
@@ -631,7 +675,14 @@ server <- function(input, output,session) {
       if (input$RecruesGaules == 1) {
         return("resultat_Gaule.csv")
       } else {
-        return(paste("resultat_", Sys.Date(), ".csv", sep = ""))
+        
+        if(input$Sortie == "echelle_billon"){
+          nom <- paste("resultat_", input$Sortie, "_",input$typeBillonnage ,"-", Sys.Date(), ".csv", sep = "")
+        }else{
+        nom <- paste("resultat_", input$Sortie,"-", Sys.Date(), ".csv", sep = "")
+        }
+        
+        return(nom)
       }
     },
     content = function(file) {
