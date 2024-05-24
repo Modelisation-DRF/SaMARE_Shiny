@@ -11,7 +11,7 @@ options(repos = c(CRAN = "https://cloud.r-project.org"))
 # Vérifie si les packages nécessaires sont installés et les ajoute si besoin
 required_packages <- c("shiny", "shinyjs", "shinyFiles", "shinydashboard", "shinythemes", "mvtnorm",
                        "tidyverse", "doFuture", "doRNG", "readxl",
-                       "sas7bdat", "miceadds", "dplyr", "reticulate", "future.apply", "rlang","sf", "rockchalk")
+                       "sas7bdat", "miceadds", "dplyr", "reticulate", "future.apply", "rlang","sf", "rockchalk", "shinyWidgets")
 for (i in required_packages) {
   if (!require(i, character.only = TRUE)) {
     install.packages(i, dependencies = TRUE)
@@ -25,7 +25,7 @@ for (i in Model_install) {
   if (!require(i, character.only = TRUE)) {
     if (i == "TarifQC") {
       install.packages(
-        "./Packages/TarifQC_1.1.4.tar.gz",
+        "./Packages/TarifQC_1.1.5.tar.gz",
         repos = NULL,
         type = "source",
         dependencies = TRUE
@@ -50,7 +50,7 @@ for (i in Model_install) {
     }
     if (i == "ExtractMap") {
       install.packages(
-        "./Packages/ExtractMap_1.1.2.tar.gz",
+        "./Packages/ExtractMap_1.1.3.tar.gz",
         repos = NULL,
         type = "source",
         dependencies = TRUE
@@ -69,6 +69,7 @@ library(SimulateurSaMARE )
 library(Billonage)
 library(ExtractMap)
 library(sf)
+library(shinyWidgets)
 # Define UI for application that draws a histogram
 
 ui <- fluidPage(
@@ -81,27 +82,22 @@ ui <- fluidPage(
     "))
   ),
   navbarPage("", id = "all_pages",
-             tabPanel(img(src = "SaMARE_MRNF_Final.jpg", height = 50, width = 70),
-                      div(id = "main_app",  # Div pour l'application principale
-                               # titlePanel("Samare"),
-
-                                #titlePanel(img(src = "SaMARE_MRNF_Final.jpg", height = 150, width = 270)),
-                          #helpText("Version 2.1.0"),
+             tabPanel(img(src = "SaMARE_MRNF_Final.jpg", height = 50, width = 70), #logo de Samare 
+                      div(id = "main_app",  
+                              
                           tags$div(style = "font-size: 10px;", "Version 2.1.0"),
-                        #  HTML("<small>Version 2.1.0"),
+                        
                                 sidebarLayout(
 
                                   uiOutput("dynamic_sidebar"),
                                   # Afficher le contenu du fichier CSV dans un tableau
                                   mainPanel(
                                     uiOutput("dynamic_mainpanel"),
-                                    #tableOutput("table")
-                                    
-                                    
-                                    
+                               
                                   )
                                 ),
                         div(
+                          # boutton pour fermer l'application 
                           tags$button(
                             id = 'close',
                             type = "button",
@@ -116,6 +112,7 @@ ui <- fluidPage(
                         
                             )
              ),
+             # page d'aide 
              tabPanel(img(src = "Aide.jpg", height = 50, width = 70),
                       div(id = "help_page",
                           h2("Page d'Aide"),
@@ -133,13 +130,13 @@ ui <- fluidPage(
 server <- function(input, output,session) {
   
   stopSimulation <- function() {
-    # ...
     system("taskkill /f /im R.exe")
     system("taskkill /f /im Rterm.exe")
   }
   
   output$dynamic_sidebar <- renderUI({
-     
+     #pannel principale 
+    
     sidebarPanel(
       
       fileInput( 
@@ -157,7 +154,7 @@ server <- function(input, output,session) {
       htmlOutput("statut_data"),
       htmlOutput("error_data"),
       numericInput("Horizon", "Nombre d'années de simulation (multiple de 5)",min = 0 ,value = NA, step = 5),
-      radioButtons("RecruesGaules", "Recrutement Basé sur les gaules",
+      radioButtons("RecruesGaules", "Recrutement basé sur les gaules",
                    choices = list("Oui" = 1, "Non" = 0),
                    selected = 0,
                    inline = TRUE),
@@ -177,7 +174,7 @@ server <- function(input, output,session) {
       htmlOutput("statut_data_gaules"),
       htmlOutput("error_data_gaules"),
       numericInput("NbIter", "Nombre d'itérations", min = 2,value = NA),
-      radioButtons("corticale", "maladie corticale du hêtre",
+      radioButtons("corticale", "Maladie corticale du hêtre",
                    choices = list("Oui" = 1, "Non" = 0),
                    selected = 0,
                    inline = TRUE),
@@ -186,21 +183,24 @@ server <- function(input, output,session) {
     )
   
   })
-  # Lire le fichier CSV avec un point-virgule comme délimiteur
+  # Lire le fichier arbres avec un point-virgule comme délimiteur
   data <- reactive({
     req(input$file)
    # read.csv(input$file$datapath, sep  = ";")
-    read_delim(input$file$datapath, delim   = ";")
+    read.delim(input$file$datapath, sep   = ";")
   })
+  
+  # Lire le fichier des gaules avec un point-virgule comme délimiteur
   gaule_data <- reactive({
     req(input$gauleFile)
     # read.csv(input$gauleFile$datapath, sep  = ";")
-    read_delim(input$gauleFile$datapath, delim   = ";")
-    
-  })
+    read.delim(input$gauleFile$datapath, sep = ";")
+    })
+  
+  
   simulation_status <- reactiveVal("Attente de la simulation...")
   
-  # Appeler la fonction pour la simulation avec le dataframe lu
+  #variable reactive 
   processed_Simul <- reactiveVal(NULL)
   processed_data_ArbreSamare <- reactiveVal(NULL)
   processed_data_DendroSamare <- reactiveVal(NULL)
@@ -214,138 +214,63 @@ server <- function(input, output,session) {
   graph_to_print <- reactiveVal(NULL)
   graph<- reactiveVal(NULL)
   vevifier_meteo<- reactiveVal(NULL)
+  placette <- reactiveVal(NULL)
+ 
   
-  observeEvent(input$file, {
-    
-    output$dynamic_mainpanel <- renderUI({
-      
-      tableOutput("table")
-    })
-     processed_absent(trouver_noms_absents(data()))
-    valider_data(valide_data(data()))
-    
-    
-    if (length(processed_absent()) != 0) {
-      list_string <- paste(processed_absent(), collapse = ', ')
-      output$statut_data <- renderText({
-        HTML("<b>Les colonnes suivantes sont manquantes :</b>")
+  # Fonction pour afficher les erreurs
+  afficher_erreurs <- function(erreurs, statut_output, erreur_output) {
+    if (length(erreurs) != 0) {
+      list_string <- paste(erreurs, collapse = ', ')
+      output[[statut_output]] <- renderText({
+        HTML("<b>Les erreurs suivantes ont été détectées :</b>")
       })
-      output$error_data <- renderText({
+      output[[erreur_output]] <- renderText({
         HTML(paste("<span style='color:red;'>", list_string, "</span>"))
       })
     } else {
-      output$statut_data <- renderText({
-        HTML("")
-      })
-      output$error_data <- renderText({
-        HTML("")
-      })
-      
-      
-     
-      
-      
-      output$conditionalButton <- renderUI({
-        if (!is.null(input$file) && !is.na(input$Horizon) && !is.na(input$NbIter) && input$NbIter > 1) {
-          actionButton("simulateButton", "Simulation")
-        }
-      }) 
+      output[[statut_output]] <- renderText({ HTML("") })
+      output[[erreur_output]] <- renderText({ HTML("") })
     }
+  }
+  
+  # Fonction pour afficher le bouton de simulation
+  afficher_bouton_simulation <- function() {
+    output$conditionalButton <- renderUI({
+      if (!is.null(input$file) && !is.na(input$Horizon) && !is.na(input$NbIter) && input$NbIter > 1) {
+        actionButton("simulateButton", "Simulation")
+      }
+    })
+  }
+  
+  
+  observeEvent(input$file, {
+    output$dynamic_mainpanel <- renderUI({ tableOutput("table") })
     
-    if (length(valider_data()) != 0) {
-      list_string1 <- paste(valider_data(), collapse = ', ')
-      output$statut <- renderText({
-        HTML("<b>Les erreurs suivantes ont été détectées :</b>")
-      })
-      output$error <- renderText({
-        HTML(paste("<span style='color:red;'>", list_string1, "</span>"))
-      })
-    } else {
-      output$statut <- renderText({
-        HTML("")
-      })
-      output$error <- renderText({
-        HTML("")
-      })
-      
-      
-      
-      
-      
-      output$conditionalButton <- renderUI({
-        if (!is.null(input$file) && !is.na(input$Horizon) && !is.na(input$NbIter) && input$NbIter > 1) {
-          actionButton("simulateButton", "Simulation")
-        }
-      }) 
+    processed_absent(trouver_noms_absents(data()))
+    valider_data(valide_data(data()))
+    
+    afficher_erreurs(processed_absent(), "statut_data", "error_data")
+    afficher_erreurs(valider_data(), "statut", "error")
+    
+    if (length(processed_absent()) == 0 && length(valider_data()) == 0) {
+      placette(unique(data()$Placette))
+      afficher_bouton_simulation()
     }
-    
-    
-    
   })
   
-
+  # Observateur pour l'événement input$gauleFile
   observeEvent(input$gauleFile, {
     processed_absent_gaules(trouver_noms_absents_gaules(gaule_data()))
     valider_data_gaules(valide_data_gaules(gaule_data()))
     
-    if (length(processed_absent_gaules()) != 0) {
-      list_string_gaules <- paste(processed_absent_gaules(), collapse = ', ')
-      output$statut_data_gaules <- renderText({
-        HTML("<b>Les colonnes suivantes sont manquantes :</b>")
-      })
-      output$error_data_gaules <- renderText({
-        HTML(paste("<span style='color:red;'>", list_string_gaules, "</span>"))
-      })
-    } else {
-      output$statut_data_gaules <- renderText({
-        HTML("")
-      })
-      output$error_data_gaules <- renderText({
-        HTML("")
-      })
-      
-      
-      
-      
-      
-      output$conditionalButton <- renderUI({
-        if (!is.null(input$file) && !is.na(input$Horizon) && !is.na(input$NbIter) && input$NbIter > 1) {
-          actionButton("simulateButton", "Simulation")
-        }
-      }) 
+    afficher_erreurs(processed_absent_gaules(), "statut_data_gaules", "error_data_gaules")
+    afficher_erreurs(valider_data(), "statut", "error")
+    
+    if (length(processed_absent_gaules()) == 0 && length(valider_data()) == 0) {
+      afficher_bouton_simulation()
     }
-    
-    if (length(valider_data()) != 0) {
-      list_string1 <- paste(valider_data(), collapse = ', ')
-      output$statut <- renderText({
-        HTML("<b>Les erreurs suivantes ont été détectées :</b>")
-      })
-      output$error <- renderText({
-        HTML(paste("<span style='color:red;'>", list_string1, "</span>"))
-      })
-    } else {
-      output$statut <- renderText({
-        HTML("")
-      })
-      output$error <- renderText({
-        HTML("")
-      })
-      
-      
-      
-      
-      
-      output$conditionalButton <- renderUI({
-        if (!is.null(input$file) && !is.na(input$Horizon) && !is.na(input$NbIter) && input$NbIter > 1) {
-          actionButton("simulateButton", "Simulation")
-        }
-      }) 
-    }
-    
-    
-    
-
   })
+  
 
 
   observe({
@@ -357,32 +282,17 @@ server <- function(input, output,session) {
     output$conditionalButton <- renderUI({
       if (!is.null(input$file)  && !is.na(input$Horizon) && !is.na(input$NbIter) && input$NbIter > 1 && input$RecruesGaules ==0 && length(processed_absent()) == 0 && length(valider_data()) == 0) {
         actionButton("simulateButton", "Simulation")
-      }else if(!is.null(input$file)  && !is.na(input$ Horizon) && !is.na(input$NbIter) && input$NbIter > 1 && input$RecruesGaules ==1 && !is.null(input$gauleFile) && length(processed_absent()) == 0 && length(valider_data()) == 0){
+      }else if(!is.null(input$file)  && !is.na(input$ Horizon) && !is.na(input$NbIter) && input$NbIter > 1 && input$RecruesGaules ==1 && !is.null(input$gauleFile) && length(processed_absent()) == 0 && length(valider_data()) == 0 && length(processed_absent_gaules()) == 0 && length(valider_data()) == 0){
         
         actionButton("simulateButton", "Simulation")
       }
     })
   })
   
-  
 
-  # observeEvent(input$file, {
-  #   
-  #  colonnes_abs<-trouver_noms_absents(data())
-  #  if(length(colonnes_abs) ==0){
-  #    
-  #    abs=TRUE
-  #    
-  #  }else{
-  #    
-  #    abs=FALSE
-  #    
-  #  }
-  #  
-  #   
-  # })
   
   observeEvent(input$simulateButton, {
+    
     simulation_status("Simulation en cours...")
    
     vevifier_meteo(vevifier_variable_meteo(data()))
@@ -391,6 +301,7 @@ server <- function(input, output,session) {
       h3("Simulation en cours..."),
     )
     })
+
 
       withProgress(message = 'Simulation en cours...', value = 0, {
        
@@ -438,7 +349,20 @@ server <- function(input, output,session) {
                                     "Distribution diamétrale" )),
         tags$br(),
         selectInput("Espece", "Groupe d'espece", choices = c("" )),
-        selectInput("variable", "Choix de la variable", choices = c("ST_HA", "Vol_HA", "DQM","HDomM", "nbTi_HA")),
+        
+        conditionalPanel(
+          condition = "input.graphType == 'Évolution des variables'",
+        selectInput("variable", "Choix de la variable", choices = c("ST_HA", "Vol_HA", "DQM","HDomM", "nbTi_HA"))
+        ),
+        pickerInput(
+          inputId = "placette", 
+          label = "Choix des placettes", 
+          choices = placette(), 
+          options = list(`actions-box` = TRUE), 
+          selected = placette(),
+          multiple = TRUE
+        ),
+        
         downloadButton("downloadPlot", "Télécharger le Graphique"),
         tags$br(),
         tags$br(),
@@ -448,8 +372,8 @@ server <- function(input, output,session) {
                      inline = TRUE),
         tags$br(),
         selectInput("Sortie",
-                    label = "Choisis la sortie",
-                    choices = c("Arbre par itération" = "arbre_par_iteration", "sommaire dendrometrique par itération" = "dendrometrique_par_iteration", "sommaire dendrometrique par placette" = "dendrometrique_par_placette", "à l'échelle du billon"="echelle_billon")
+                    label = "Choix de la sortie",
+                    choices = c("Arbre par itération" = "arbre_par_iteration", "sommaire dendrometrique par itération" = "dendro_par_iteration", "sommaire dendrometrique par placette" = "dendro_par_placette", "à l'échelle du billon"="echelle_billon")
       ),
       tags$br(),
       
@@ -482,15 +406,27 @@ server <- function(input, output,session) {
     
   })
   
-  observeEvent(input$Espece,{
-    
-    graph(Graph(SimulHtVol = processed_data_htvol(), Espece = input$Espece, Variable = input$variable))
+  # Fonction pour mettre à jour le graphique
+  mettre_a_jour_graphique <- function() {
+    graph(Graph(SimulHtVol = processed_data_htvol(), Espece = input$Espece, Variable = input$variable, listePlacette = input$placette))
+  }
+  
+ 
+  observeEvent(input$Espece, {
+    mettre_a_jour_graphique()
   })
   
-  observeEvent(input$variable,{
-    
-    graph(Graph(SimulHtVol = processed_data_htvol(), Espece = input$Espece, Variable = input$variable))
+
+  observeEvent(input$variable, {
+    mettre_a_jour_graphique()
   })
+  
+  
+  observeEvent(input$placette, {
+    mettre_a_jour_graphique()
+  })
+  
+  
   
   output$plot <- renderPlot({
     # Ici, on suppose que `Graph` renvoie une liste de deux éléments graphiques
@@ -646,13 +582,13 @@ server <- function(input, output,session) {
            "arbre_par_iteration" = {
              processed_Simul(SortieArbreSamare(SimulHtVol = processed_data_htvol(), simplifier = simplifier))
            },
-           "dendrometrique_par_placette" = {
+           "dendro_par_placette" = {
              processed_Simul(SortieDendroSamare(SimulHtVol = processed_data_htvol(), simplifier = simplifier))
            },
            "echelle_billon" = {
              processed_Simul(processed_Billonage())
            },
-           "dendrometrique_par_iteration" = {
+           "dendro_par_iteration" = {
              processed_Simul(SortieDendroIterSamare(SimulHtVol = processed_data_htvol(), simplifier = simplifier))
            },
          
@@ -669,6 +605,7 @@ server <- function(input, output,session) {
       data()[1:20,]
   })
   
+
   # Télécharger le résultat après simulation 
   output$download <- downloadHandler(
     filename = function() {
@@ -677,9 +614,9 @@ server <- function(input, output,session) {
       } else {
         
         if(input$Sortie == "echelle_billon"){
-          nom <- paste("resultat_", input$Sortie, "_",input$typeBillonnage ,"-", Sys.Date(), ".csv", sep = "")
+          nom <- paste("resultat_", input$Sortie, "_",input$typeBillonnage ,"-",input$NbIter,"i","_", Sys.Date(), ".csv", sep = "")
         }else{
-        nom <- paste("resultat_", input$Sortie,"-", Sys.Date(), ".csv", sep = "")
+        nom <- paste("resultat_", input$Sortie,"-",input$NbIter,"i","_", Sys.Date(), ".csv", sep = "")
         }
         
         return(nom)
@@ -694,8 +631,16 @@ server <- function(input, output,session) {
   
   output$downloadPlot <- downloadHandler(
     filename = function() {
-      paste("graphique-", Sys.Date(), ".png", sep="")
-    },
+      
+      if(input$graphType == 'Évolution des variables'){
+        
+        paste("graphique","_","évol","_",input$variable,"_",input$Espece,"_", Sys.Date(), ".png", sep="")
+      }else{
+        paste("graphique","_","dist","_",input$Espece,"_", Sys.Date(), ".png", sep="")
+      }
+    
+      },
+    
     content = function(file) {
       
       plot <- graph_to_print()
@@ -712,10 +657,10 @@ server <- function(input, output,session) {
   
   output$downloadPDF <- downloadHandler(
     filename = function() {
-      "test.pdf"
+      "consigne SaMARE.pdf"
     },
     content = function(file) {
-      file.copy("WWW/SuiviHoraireVariable_janvier_Junior_Peumi.pdf", file)
+      file.copy("WWW/consigne SaMARE.pdf", file)
     }
   )
   
