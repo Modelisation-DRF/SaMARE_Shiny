@@ -134,6 +134,10 @@ server <- function(input, output,session) {
     system("taskkill /f /im Rterm.exe")
   }
   
+  session$onSessionEnded(function() {
+    stopApp()
+  })
+  
   output$dynamic_sidebar <- renderUI({
      #pannel principale 
     
@@ -141,7 +145,7 @@ server <- function(input, output,session) {
       
       fileInput( 
       inputId="file",
-      label="Choisissez un fichier CSV",
+      label="Données d'inventaire de départ format CSV",
       multiple = FALSE,
       accept = NULL,
       width = NULL,
@@ -163,7 +167,7 @@ server <- function(input, output,session) {
        
         fileInput( 
           inputId="gauleFile",
-          label="Fichier Gaule doit être téléchargé avant la simulation",
+          label="Dénombrement des gaules format CSV",
           multiple = FALSE,
           accept = NULL,
           width = NULL,
@@ -490,29 +494,32 @@ server <- function(input, output,session) {
     output$dynamic_sidebar <- renderUI({
       
       sidebarPanel(
+        
         fileInput( 
           inputId="file",
-          label="Choisissez un fichier CSV",
+          label="Données d'inventaire de départ format CSV",
           multiple = FALSE,
           accept = NULL,
           width = NULL,
           buttonLabel = "Parcourir",
           placeholder = "Aucun fichier sélectioné",
           capture = NULL),
+        
         htmlOutput("statut"),
         htmlOutput("error"),
         htmlOutput("statut_data"),
         htmlOutput("error_data"),
         numericInput("Horizon", "Nombre d'années de simulation (multiple de 5)",min = 0 ,value = NA, step = 5),
-        radioButtons("RecruesGaules", "Recrutement Basé sur les gaules",
+        radioButtons("RecruesGaules", "Recrutement basé sur les gaules",
                      choices = list("Oui" = 1, "Non" = 0),
                      selected = 0,
                      inline = TRUE),
         conditionalPanel(
           condition = "input.RecruesGaules == 1",
+          
           fileInput( 
             inputId="gauleFile",
-            label="Fichier Gaule doit être téléchargé avant la simulation",
+            label="Dénombrement des gaules format CSV",
             multiple = FALSE,
             accept = NULL,
             width = NULL,
@@ -523,7 +530,7 @@ server <- function(input, output,session) {
         htmlOutput("statut_data_gaules"),
         htmlOutput("error_data_gaules"),
         numericInput("NbIter", "Nombre d'itérations", min = 2,value = NA),
-        radioButtons("corticale", "maladie corticale du hêtre",
+        radioButtons("corticale", "Maladie corticale du hêtre",
                      choices = list("Oui" = 1, "Non" = 0),
                      selected = 0,
                      inline = TRUE),
