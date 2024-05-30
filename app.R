@@ -77,10 +77,59 @@ ui <- fluidPage(
   tags$head(
     tags$style(HTML("
       .sidebar {
-        background-color: #00FF00; /* Vert lumineux comme exemple */
+        background-color: #00FF00; 
       }
     "))
-  ),
+  ), tags$style(HTML("
+  
+    .btn {
+      background-color: #008000;
+      border-color: #008000;
+      color: white;
+    }
+    .well {
+        background-color: #d8f3dc; 
+    }
+      
+    .btn:hover {
+      background-color: darkgreen;
+    }
+    .progress-bar {
+      background-color: #008000;
+    }
+    
+    
+    input[type='radio']:checked {
+          background-color: #008000;
+          border-color: #008000;
+      }
+      input[type='radio'] {
+          appearance: none;
+          -webkit-appearance: none;
+          -moz-appearance: none;
+          width: 1em;
+          height: 1em;
+          border: 0.15em solid black;
+          border-radius: 50%;
+          outline: none;
+          cursor: pointer;
+          position: relative;
+          transition: all 0.2s ease-in-out;
+      }
+      input[type='radio']:checked::before {
+          content: '';
+          display: block;
+          width: 60%;
+          height: 60%;
+          background: #008000;
+          border-radius: 50%;
+          position: absolute;
+          top: 50%;
+          left: 50%;
+          transform: translate(-50%, -50%);
+      }
+    
+  ")),
   navbarPage("", id = "all_pages",
              tabPanel(img(src = "SaMARE_MRNF_Final.jpg", height = 50, width = 70), #logo de Samare 
                       div(id = "main_app",  
@@ -104,9 +153,11 @@ ui <- fluidPage(
                             class = "btn action-button",
                             icon("close"),
                             onclick = "setTimeout(function(){window.close();},500);",
-                            style = "color: #fff; background-color: #337ab7; border-color: #2e6da4",
-                            "Fermer l'application"
+                            style = "color: #fff; background-color: #008000 ; border-color: #2e6da4; hover: black",
+                            "Fermer l'application",
+                           
                           ),
+                          
                           style = "margin-top: 20px;"
                         )
                         
@@ -157,7 +208,7 @@ server <- function(input, output,session) {
       htmlOutput("error"),
       htmlOutput("statut_data"),
       htmlOutput("error_data"),
-      numericInput("Horizon", "Nombre d'années de simulation (multiple de 5)",min = 0 ,value = NA, step = 5),
+      numericInput("Horizon", "Nombre d'années de simulation (multiple de 5)",min = 5 ,value = NA, step = 5),
       radioButtons("RecruesGaules", "Recrutement basé sur les gaules",
                    choices = list("Oui" = 1, "Non" = 0),
                    selected = 0,
@@ -325,14 +376,8 @@ server <- function(input, output,session) {
         simulation_status("Simulation terminée. Vous pouvez maintenant télécharger le résultat.")
       })
    
-    
-   
-     
-   
+  
     processed_data_htvol(processed_Simul())
-    # processed_data_ArbreSamare(SortieArbreSamare(SimulHtVol = processed_Simul()))
-    # processed_data_DendroSamare(SortieDendroSamare(SimulHtVol = processed_Simul()))
-    # processed_data_DendroIterSamare(SortieDendroIterSamare(SimulHtVol = processed_Simul()))
     
     
     output$dynamic_sidebar <- renderUI({
@@ -509,7 +554,7 @@ server <- function(input, output,session) {
         htmlOutput("error"),
         htmlOutput("statut_data"),
         htmlOutput("error_data"),
-        numericInput("Horizon", "Nombre d'années de simulation (multiple de 5)",min = 0 ,value = NA, step = 5),
+        numericInput("Horizon", "Nombre d'années de simulation (multiple de 5)",min = 5 ,value = NA, step = 5),
         radioButtons("RecruesGaules", "Recrutement basé sur les gaules",
                      choices = list("Oui" = 1, "Non" = 0),
                      selected = 0,
