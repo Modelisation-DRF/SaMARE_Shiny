@@ -130,49 +130,58 @@ ui <- fluidPage(
       }
     
   ")),
-  navbarPage("", id = "all_pages",
-             tabPanel(img(src = "SaMARE_MRNF_Final.jpg", height = 50, width = 70), #logo de Samare 
-                      div(id = "main_app",  
-                              
-                          tags$div(style = "font-size: 10px;", "Version 2.1.0"),
-                        
-                                sidebarLayout(
-
-                                  uiOutput("dynamic_sidebar"),
-                                  # Afficher le contenu du fichier CSV dans un tableau
-                                  mainPanel(
-                                    uiOutput("dynamic_mainpanel"),
-                               
-                                  )
-                                ),
-                        div(
-                          # boutton pour fermer l'application 
-                          tags$button(
-                            id = 'close',
-                            type = "button",
-                            class = "btn action-button",
-                            icon("close"),
-                            onclick = "setTimeout(function(){window.close();},500);",
-                            style = "color: #fff; background-color: #008000 ; border-color: #2e6da4; hover: black",
-                            "Fermer l'application",
-                           
-                          ),
-                          
-                          style = "margin-top: 20px;"
-                        )
-                        
-                            )
-             ),
-             # page d'aide 
-             tabPanel(img(src = "Aide.jpg", height = 50, width = 70),
-                      div(id = "help_page",
-                          h2("Page d'Aide"),
-                          p("Pour information contacter :"),
-                          p("recherche forestière - recherche.forestiere@mrnf.gouv.qc.ca"),
-                          downloadButton("downloadPDF", "Télécharger le PDF")
-                        
-                      )
-             )
+  navbarPage(
+    "",
+    id = "all_pages",
+    tags$style(HTML("
+    .navbar-default {
+      background-color: #d3f4d7; /* vert pâle */
+      border-color: #d3f4d7;
+    }
+    .navbar-default .navbar-nav > li > a {
+      color: #000; /* couleur du texte */
+    }
+    .navbar-default .navbar-brand {
+      color: #000; /* couleur du texte */
+    }
+  ")),
+    tabPanel(
+      img(src = "SaMARE_MRNF_Final.jpg", height = 50, width = 70), # logo de Samare
+      div(
+        id = "main_app",
+        tags$div(style = "font-size: 10px;", "Version 2.1.0"),
+        sidebarLayout(
+          uiOutput("dynamic_sidebar"),
+          mainPanel(
+            uiOutput("dynamic_mainpanel")
+          )
+        ),
+        div(
+          # bouton pour fermer l'application
+          tags$button(
+            id = 'close',
+            type = "button",
+            class = "btn action-button",
+            icon("close"),
+            onclick = "setTimeout(function(){window.close();},500);",
+            style = "color: #fff; background-color: #008000; border-color: #2e6da4; hover: black",
+            "Fermer l'application"
+          ),
+          style = "margin-top: 20px;"
+        )
+      )
+    ),
+    # page d'aide
+    tabPanel(
+      img(src = "Aide2.webp", height = 50, width = 70),
+      div(
+        id = "help_page",
+        h2("Page d'Aide"),
+        p("Pour information contacter :"),
+        p("recherche forestière - recherche.forestiere@mrnf.gouv.qc.ca"),
+        downloadButton("downloadPDF", "Télécharger le PDF")
+      )
+    )
   )
 )
 
