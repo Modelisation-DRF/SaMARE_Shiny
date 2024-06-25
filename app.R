@@ -73,15 +73,15 @@ library(shinyWidgets)
 # Define UI for application that draws a histogram
 
 ui <- fluidPage(
-  useShinyjs(),  # Initialise shinyjs
+  useShinyjs(),  # Initialize shinyjs
   tags$head(
     tags$style(HTML("
       .sidebar {
         background-color: #00FF00; 
       }
     "))
-  ), tags$style(HTML("
-  
+  ), 
+  tags$style(HTML("
     .btn {
       background-color: #008000;
       border-color: #008000;
@@ -90,46 +90,42 @@ ui <- fluidPage(
     .well {
         background-color: #d8f3dc; 
     }
-      
     .btn:hover {
       background-color: darkgreen;
     }
     .progress-bar {
       background-color: #008000;
     }
-    
-    
     input[type='radio']:checked {
-          background-color: #008000;
-          border-color: #008000;
-      }
-      input[type='radio'] {
-          appearance: none;
-          -webkit-appearance: none;
-          -moz-appearance: none;
-          width: 1em;
-          height: 1em;
-          border: 0.15em solid black;
-          border-radius: 50%;
-          outline: none;
-          cursor: pointer;
-          position: relative;
-          transition: all 0.2s ease-in-out;
-      }
-      input[type='radio']:checked::before {
-          content: '';
-          display: block;
-          width: 60%;
-          height: 60%;
-          background: #008000;
-          border-radius: 50%;
-          position: absolute;
-          top: 50%;
-          left: 50%;
-          transform: translate(-50%, -50%);
-      }
-      
-      .navbar-default {
+      background-color: #008000;
+      border-color: #008000;
+    }
+    input[type='radio'] {
+      appearance: none;
+      -webkit-appearance: none;
+      -moz-appearance: none;
+      width: 1em;
+      height: 1em;
+      border: 0.15em solid black;
+      border-radius: 50%;
+      outline: none;
+      cursor: pointer;
+      position: relative;
+      transition: all 0.2s ease-in-out;
+    }
+    input[type='radio']:checked::before {
+      content: '';
+      display: block;
+      width: 60%;
+      height: 60%;
+      background: #008000;
+      border-radius: 50%;
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+    }
+    .navbar-default {
       background-color: #d3f4d7; /* vert pâle */
       border-color: #d3f4d7;
     }
@@ -139,7 +135,6 @@ ui <- fluidPage(
     .navbar-default .navbar-brand {
       color: #000; /* couleur du texte */
     }
-    
   ")),
   navbarPage(
     "",
@@ -174,15 +169,46 @@ ui <- fluidPage(
     tabPanel(
       img(src = "Aide2.webp", height = 50, width = 70),
       div(
+        tags$div(
+          tags$style(HTML("
+            .content-wrapper {
+              background: url('https://yourimageurl.com/image.png') no-repeat center center fixed;
+              background-size: cover;
+              color: white;
+              padding: 20px;
+              font-family: Arial, sans-serif;
+            }
+            .box {
+             
+              padding: 20px;
+              border-radius: 10px;
+            }
+            .box h2 {
+              font-size: 36px;
+            }
+            .box p {
+              font-size: 18px;
+            }
+          ")),
+          fluidRow(
+            column(width = 12, 
+                   div(class = "box",
+                       h2("À Propos De SaMARE"),
+                       p("From our initial entry into car insurance, recent expansion into homeowners and big plans for the future including renters, RV, boat and more, The Zebra is achieving our vision of a trusted partner for consumers, helping them to better manage and understand all their insurance needs through every stage of life, even in the face of the unexpected.")
+                   )
+            )
+          )
+        ),
         id = "help_page",
         h2("Page d'Aide"),
         p("Pour information contacter :"),
         p("recherche forestière - recherche.forestiere@mrnf.gouv.qc.ca"),
-        downloadButton("downloadPDF", "Télécharger le PDF")
+        downloadButton("downloadPDF", "Télécharger le PDF"),
       )
     )
   )
 )
+
 
 
 # Définir le serveur
@@ -369,11 +395,13 @@ server <- function(input, output,session) {
    
     output$conditionalButton <- renderUI({
       if (!is.null(input$file)  && !is.na(input$Horizon) && !is.na(input$NbIter) && input$NbIter > 1 && input$RecruesGaules ==0 && length(processed_absent()) == 0 && length(valider_data()) == 0) {
+        placette(unique(data()$Placette))
         actionButton("simulateButton", "Simulation")
+       
       }else if(!is.null(input$file)  && !is.na(input$ Horizon) && !is.na(input$NbIter) && input$NbIter > 1 && input$RecruesGaules ==1 && !is.null(input$gauleFile) && length(processed_absent()) == 0 && length(valider_data()) == 0 && length(processed_absent_gaules()) == 0 && length(valider_data_gaules()) == 0 && length(valider_placette_gaules()) == 0){
-        
+        placette(unique(data()$Placette))
         actionButton("simulateButton", "Simulation")
-        
+       
         
         
       }
@@ -430,22 +458,29 @@ server <- function(input, output,session) {
         textOutput("simulationStatus"),
         tags$br(),
         radioButtons("graphType", "Type de graphique à créer:",
-                     choices = list("Évolution des variables" ,
-                                    "Distribution diamétrale" )),
+                     choices = list("Évolution des variables par placette" ,
+                                    "Distribution diamétrale moyenne" )),
         tags$br(),
         selectInput("Espece", "Groupe d'espece", choices = c("" )),
         
         conditionalPanel(
-          condition = "input.graphType == 'Évolution des variables'",
+          condition = "input.graphType == 'Évolution des variables par placette'",
         selectInput("variable", "Choix de la variable", choices = c("ST_HA", "Vol_HA", "DQM","HDomM", "nbTi_HA"))
         ),
         pickerInput(
           inputId = "placette", 
           label = "Choix des placettes", 
           choices = placette(), 
-          options = list(`actions-box` = TRUE), 
+         
+          # options = list(`actions-box` = TRUE), 
           selected = placette(),
-          multiple = TRUE
+          multiple = TRUE,
+          options = list(
+            `actions-box` = TRUE,
+            `deselect-all-text` = "Tout supprimer",
+            `select-all-text` = "Tout sélectionner",
+            `none-selected-text` = "Rien de sélectionner"
+          )
         ),
         
         downloadButton("downloadPlot", "Télécharger le Graphique"),
@@ -458,7 +493,7 @@ server <- function(input, output,session) {
         tags$br(),
         selectInput("Sortie",
                     label = "Choix de la sortie",
-                    choices = c("Arbre par itération" = "arbre_par_iteration", "sommaire dendrometrique par itération" = "dendro_par_iteration", "sommaire dendrometrique par placette" = "dendro_par_placette", "à l'échelle du billon"="echelle_billon")
+                    choices = c("Arbre par itération" = "arbre_par_iteration", "Sommaire dendrométrique par itération" = "dendro_par_iteration", "Sommaire dendrométrique par placette" = "dendro_par_placette", "À l'échelle du billon"="echelle_billon")
       ),  
       tags$br(),
       
@@ -500,17 +535,17 @@ server <- function(input, output,session) {
   observeEvent(input$Espece, {
     mettre_a_jour_graphique()
   })
-  
+
 
   observeEvent(input$variable, {
     mettre_a_jour_graphique()
   })
-  
-  
+
+
   observeEvent(input$placette, {
     mettre_a_jour_graphique()
   })
-  
+
   
   
   output$plot <- renderPlot({
@@ -519,7 +554,7 @@ server <- function(input, output,session) {
     graphiques <- graph()
     
     # Utiliser input$graphType pour décider quel graphique afficher
-    if(input$graphType == "Évolution des variables") {
+    if(input$graphType == "Évolution des variables par placette") {
       graph_to_print (graphiques[[1]])
     } else {
       graph_to_print(graphiques[[2]])
@@ -732,7 +767,7 @@ server <- function(input, output,session) {
   output$downloadPlot <- downloadHandler(
     filename = function() {
       
-      if(input$graphType == 'Évolution des variables'){
+      if(input$graphType == 'Évolution des variables par placette'){
         
         paste("graphique","_","évol","_",input$variable,"_",input$Espece,"_", Sys.Date(), ".png", sep="")
       }else{
