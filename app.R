@@ -128,13 +128,8 @@ ui <- fluidPage(
           left: 50%;
           transform: translate(-50%, -50%);
       }
-    
-  ")),
-  navbarPage(
-    "",
-    id = "all_pages",
-    tags$style(HTML("
-    .navbar-default {
+      
+      .navbar-default {
       background-color: #d3f4d7; /* vert pâle */
       border-color: #d3f4d7;
     }
@@ -144,7 +139,11 @@ ui <- fluidPage(
     .navbar-default .navbar-brand {
       color: #000; /* couleur du texte */
     }
+    
   ")),
+  navbarPage(
+    "",
+    id = "all_pages",
     tabPanel(
       img(src = "SaMARE_MRNF_Final.jpg", height = 50, width = 70), # logo de Samare
       div(
@@ -233,10 +232,15 @@ server <- function(input, output,session) {
           width = NULL,
           buttonLabel = "Parcourir",
           placeholder = "Aucun fichier sélectioné",
-          capture = NULL)
+          capture = NULL),
+        htmlOutput("statut_data_gaules"),
+        htmlOutput("error_data_gaules"),
+        htmlOutput("statut_data_gaules_vall"),
+        htmlOutput("error_data_gaules_vall"),
+        htmlOutput("statut_data_gaules_plac"),
+        htmlOutput("error_data_gaules_plac")
       ),
-      htmlOutput("statut_data_gaules"),
-      htmlOutput("error_data_gaules"),
+    
       numericInput("NbIter", "Nombre d'itérations", min = 2,value = NA),
       radioButtons("corticale", "Maladie corticale du hêtre",
                    choices = list("Oui" = 1, "Non" = 0),
@@ -274,6 +278,7 @@ server <- function(input, output,session) {
   processed_absent_gaules <- reactiveVal(NULL)
   valider_data <- reactiveVal(NULL)
   valider_data_gaules <- reactiveVal(NULL)
+  valider_placette_gaules <- reactiveVal(NULL)
   processed_Billonage <- reactiveVal(NULL)
   graph_to_print <- reactiveVal(NULL)
   graph<- reactiveVal(NULL)
@@ -310,30 +315,46 @@ server <- function(input, output,session) {
   observeEvent(input$file, {
     output$dynamic_mainpanel <- renderUI({ tableOutput("table") })
     
+    
+    validate_files()
+  })
+  
+  # Observateur pour l'événement input$gauleFile
+  observeEvent(input$gauleFile, {
+   
+      validate_files()
+   
+  })
+  
+  
+  
+  
+  validate_files <- function() {
+    if (is.null(input$file)) {
+      afficher_erreurs("Le fichier data est manquant.", "statut_data_gaules", "error_data_gaules")
+      return()
+    }
     processed_absent(trouver_noms_absents(data()))
     valider_data(valide_data(data()))
     
     afficher_erreurs(processed_absent(), "statut_data", "error_data")
     afficher_erreurs(valider_data(), "statut", "error")
     
-    if (length(processed_absent()) == 0 && length(valider_data()) == 0) {
-      placette(unique(data()$Placette))
-      afficher_bouton_simulation()
+    if(input$RecruesGaules ==1 && !is.null(input$gauleFile)){
+      processed_absent_gaules <- trouver_noms_absents_gaules(gaule_data())
+      valider_data_gaules <- valide_data_gaules(gaule_data())
+      valider_placette_gaules <- valide_placette_gaules(data_arbre = data(), data_gaules = gaule_data())
+      
+      afficher_erreurs(processed_absent_gaules, "statut_data_gaules", "error_data_gaules")
+      afficher_erreurs(valider_data_gaules, "statut_data_gaules_vall", "error_data_gaules_vall")
+      afficher_erreurs(valider_placette_gaules, "statut_data_gaules_plac", "error_data_gaules_plac")
+      
+    
     }
-  })
+    
+    
+  }
   
-  # Observateur pour l'événement input$gauleFile
-  observeEvent(input$gauleFile, {
-    processed_absent_gaules(trouver_noms_absents_gaules(gaule_data()))
-    valider_data_gaules(valide_data_gaules(gaule_data()))
-    
-    afficher_erreurs(processed_absent_gaules(), "statut_data_gaules", "error_data_gaules")
-    afficher_erreurs(valider_data(), "statut", "error")
-    
-    if (length(processed_absent_gaules()) == 0 && length(valider_data()) == 0) {
-      afficher_bouton_simulation()
-    }
-  })
   
 
 
@@ -346,7 +367,7 @@ server <- function(input, output,session) {
     output$conditionalButton <- renderUI({
       if (!is.null(input$file)  && !is.na(input$Horizon) && !is.na(input$NbIter) && input$NbIter > 1 && input$RecruesGaules ==0 && length(processed_absent()) == 0 && length(valider_data()) == 0) {
         actionButton("simulateButton", "Simulation")
-      }else if(!is.null(input$file)  && !is.na(input$ Horizon) && !is.na(input$NbIter) && input$NbIter > 1 && input$RecruesGaules ==1 && !is.null(input$gauleFile) && length(processed_absent()) == 0 && length(valider_data()) == 0 && length(processed_absent_gaules()) == 0 && length(valider_data()) == 0){
+      }else if(!is.null(input$file)  && !is.na(input$ Horizon) && !is.na(input$NbIter) && input$NbIter > 1 && input$RecruesGaules ==1 && !is.null(input$gauleFile) && length(processed_absent()) == 0 && length(valider_data()) == 0 && length(processed_absent_gaules()) == 0 && length(valider_data_gaules()) == 0 && length(valider_placette_gaules()) == 0){
         
         actionButton("simulateButton", "Simulation")
       }
@@ -432,7 +453,7 @@ server <- function(input, output,session) {
         selectInput("Sortie",
                     label = "Choix de la sortie",
                     choices = c("Arbre par itération" = "arbre_par_iteration", "sommaire dendrometrique par itération" = "dendro_par_iteration", "sommaire dendrometrique par placette" = "dendro_par_placette", "à l'échelle du billon"="echelle_billon")
-      ),
+      ),  
       tags$br(),
       
       conditionalPanel(
@@ -579,10 +600,14 @@ server <- function(input, output,session) {
             width = NULL,
             buttonLabel = "Parcourir",
             placeholder = "Aucun fichier sélectioné",
-            capture = NULL)
+            capture = NULL),
+          htmlOutput("statut_data_gaules"),
+          htmlOutput("error_data_gaules"),
+          htmlOutput("statut_data_gaules_vall"),
+          htmlOutput("error_data_gaules_vall"),
+          htmlOutput("statut_data_gaules_plac"),
+          htmlOutput("error_data_gaules_plac")
         ),
-        htmlOutput("statut_data_gaules"),
-        htmlOutput("error_data_gaules"),
         numericInput("NbIter", "Nombre d'itérations", min = 2,value = NA),
         radioButtons("corticale", "Maladie corticale du hêtre",
                      choices = list("Oui" = 1, "Non" = 0),
@@ -671,7 +696,15 @@ server <- function(input, output,session) {
   output$download <- downloadHandler(
     filename = function() {
       if (input$RecruesGaules == 1) {
-        return("resultat_Gaule.csv")
+        
+        if(input$Sortie == "echelle_billon"){
+          nom <- paste("resultat_Gaule", input$Sortie, "_",input$typeBillonnage ,"-",input$NbIter,"i","_", Sys.Date(), ".csv", sep = "")
+        }else{
+          nom <- paste("resultat_Gaule", input$Sortie,"-",input$NbIter,"i","_", Sys.Date(), ".csv", sep = "")
+        }
+        
+        return(nom)
+        
       } else {
         
         if(input$Sortie == "echelle_billon"){
