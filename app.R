@@ -341,15 +341,18 @@ server <- function(input, output,session) {
     afficher_erreurs(valider_data(), "statut", "error")
     
     if(input$RecruesGaules ==1 && !is.null(input$gauleFile)){
-      processed_absent_gaules <- trouver_noms_absents_gaules(gaule_data())
-      valider_data_gaules <- valide_data_gaules(gaule_data())
-      valider_placette_gaules <- valide_placette_gaules(data_arbre = data(), data_gaules = gaule_data())
       
-      afficher_erreurs(processed_absent_gaules, "statut_data_gaules", "error_data_gaules")
-      afficher_erreurs(valider_data_gaules, "statut_data_gaules_vall", "error_data_gaules_vall")
-      afficher_erreurs(valider_placette_gaules, "statut_data_gaules_plac", "error_data_gaules_plac")
+      processed_absent_gaules(trouver_noms_absents_gaules(gaule_data()))
+      valider_data_gaules (valide_data_gaules(gaule_data()))
+      valider_placette_gaules(valide_placette_gaules(data_arbre = data(), data_gaules = gaule_data()))
       
-    
+      afficher_erreurs(processed_absent_gaules(), "statut_data_gaules", "error_data_gaules")
+      afficher_erreurs(valider_data_gaules(), "statut_data_gaules_vall", "error_data_gaules_vall")
+      afficher_erreurs(valider_placette_gaules(), "statut_data_gaules_plac", "error_data_gaules_plac")
+      
+     # print(length(processed_absent_gaules()))
+      # print('valide gaules', length(valider_data_gaules()))
+      # print('valide placette gaules', length(valider_placette_gaules()))
     }
     
     
@@ -370,6 +373,9 @@ server <- function(input, output,session) {
       }else if(!is.null(input$file)  && !is.na(input$ Horizon) && !is.na(input$NbIter) && input$NbIter > 1 && input$RecruesGaules ==1 && !is.null(input$gauleFile) && length(processed_absent()) == 0 && length(valider_data()) == 0 && length(processed_absent_gaules()) == 0 && length(valider_data_gaules()) == 0 && length(valider_placette_gaules()) == 0){
         
         actionButton("simulateButton", "Simulation")
+        
+        
+        
       }
     })
   })
