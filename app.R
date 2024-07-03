@@ -193,22 +193,22 @@ ui <- fluidPage(
           fluidRow(
             column(width = 12, 
                    div(class = "box",
-                       h2("À Propos De SaMARE"),
+                       h2("À Propos de SaMARE"),
                        p("Le simulateur de croissance SaMARE est un modèle de croissance à l’échelle de l’arbre. Il est adapté pour les peuplements feuillus et mixtes de la forêt tempérée du Québec. Il prévoit l’accroissement en diamètre, la probabilité de mortalité et l’évolution de la vigueur des arbres de plus de 9,0 cm de diamètre ainsi que le recrutement de nouveaux arbres au seuil de 9,1 cm."),
-                       p("Pour plus d'informations sur le modèle SaMARE ou son utilisation, veuillez vous référer au document ci-dessous."),
+                       p("Des informations sur le modèle SaMARE ou son utilisation sont disponibles dans le document ci-dessous."),
                        downloadButton("downloadPDF", "Téléchargez le fichier d'aide.")
                    ),
                    div(class = "box",
                      id = "help_page",
-                     h2("Fichier d'exemple"),
-                     p("Ci-dessous, vous trouverez un exemple que vous pourriez utiliser pour la simulation."),
-                     downloadButton("downloadPDFtest", "Téléchargez le fichier test des arbres."),
-                     downloadButton("downloadPDFtestgaules", "Téléchargez le fichier test des gaules"),
+                     h2("Fichiers d'exemple"),
+                     p("Pour voir la structure des fichiers d'inventaire et essayer une simulation, vous pouvez utiliser le fichier ci-dessous."),
+                     downloadButton("downloadPDFtest", "Téléchargez le fichier des arbres."),
+                     downloadButton("downloadPDFtestgaules", "Téléchargez le fichier des gaules"),
                    ),
                    div(class = "box",
                        h2("Contactez-nous"),
                        p("Pour plus d'informations, contactez-nous :"),
-                       p("Recherche forestière - recherche.forestiere@mrnf.gouv.qc.ca")
+                       p("recherche.forestiere@mrnf.gouv.qc.ca")
                    )
             )
           )
@@ -241,12 +241,12 @@ server <- function(input, output,session) {
       
       fileInput( 
       inputId="file",
-      label="Données d'inventaire de départ format CSV",
+      label="Données d'inventaire de départ (format csv)",
       multiple = FALSE,
       accept = NULL,
       width = NULL,
       buttonLabel = "Parcourir",
-      placeholder = "Aucun fichier sélectioné",
+      placeholder = "Aucun fichier sélectionné",
       capture = NULL),
       
       htmlOutput("statut"),
@@ -263,12 +263,12 @@ server <- function(input, output,session) {
        
         fileInput( 
           inputId="gauleFile",
-          label="Dénombrement des gaules format CSV",
+          label="Dénombrement des gaules (format csv)",
           multiple = FALSE,
           accept = NULL,
           width = NULL,
           buttonLabel = "Parcourir",
-          placeholder = "Aucun fichier sélectioné",
+          placeholder = "Aucun fichier sélectionné",
           capture = NULL),
         htmlOutput("statut_data_gaules"),
         htmlOutput("error_data_gaules"),
@@ -468,11 +468,11 @@ server <- function(input, output,session) {
         
         textOutput("simulationStatus"),
         tags$br(),
-        radioButtons("graphType", "Type de graphique à créer:",
+        radioButtons("graphType", "Type de graphiques à créer:",
                      choices = list("Évolution des variables par placette" ,
                                     "Distribution diamétrale moyenne" )),
         tags$br(),
-        selectInput("Espece", "Groupe d'espece", choices = c("" )),
+        selectInput("Espece", "Groupe d'espèces", choices = c("" )),
         
         conditionalPanel(
           condition = "input.graphType == 'Évolution des variables par placette'",
@@ -490,7 +490,7 @@ server <- function(input, output,session) {
             `actions-box` = TRUE,
             `deselect-all-text` = "Tout supprimer",
             `select-all-text` = "Tout sélectionner",
-            `none-selected-text` = "Rien de sélectionner"
+            `none-selected-text` = "Rien de sélectionné"
           )
         ),
         
@@ -504,7 +504,7 @@ server <- function(input, output,session) {
         tags$br(),
         selectInput("Sortie",
                     label = "Choix de la sortie",
-                    choices = c("Arbre par itération" = "arbre_par_iteration", "Sommaire dendrométrique par itération" = "dendro_par_iteration", "Sommaire dendrométrique par placette" = "dendro_par_placette", "À l'échelle du billon"="echelle_billon", "Sommaire Classes DHP" = "Sommaire_Classes_DHP")
+                    choices = c("Arbre par itération" = "arbre_par_iteration", "Sommaire dendrométrique par itération" = "dendro_par_iteration", "Sommaire dendrométrique par placette" = "dendro_par_placette", "À l'échelle du billon"="echelle_billon", "Sommaire classes DHP" = "Sommaire_Classes_DHP")
       ),  
       tags$br(),
       
@@ -580,7 +580,7 @@ server <- function(input, output,session) {
     listeEspece2 <- append("TOT",listeEspece)
     updateSelectInput( session = session,
                        inputId = "Espece",
-                       label = "Groupe d'espece",
+                       label = "Groupe d'espèces",
                        choices = listeEspece2 )
   })
   
@@ -624,12 +624,12 @@ server <- function(input, output,session) {
         
         fileInput( 
           inputId="file",
-          label="Données d'inventaire de départ format CSV",
+          label="Données d'inventaire de départ (format csv)",
           multiple = FALSE,
           accept = NULL,
           width = NULL,
           buttonLabel = "Parcourir",
-          placeholder = "Aucun fichier sélectioné",
+          placeholder = "Aucun fichier sélectionné",
           capture = NULL),
         
         htmlOutput("statut"),
@@ -646,12 +646,12 @@ server <- function(input, output,session) {
           
           fileInput( 
             inputId="gauleFile",
-            label="Dénombrement des gaules format CSV",
+            label="Dénombrement des gaules (format csv)",
             multiple = FALSE,
             accept = NULL,
             width = NULL,
             buttonLabel = "Parcourir",
-            placeholder = "Aucun fichier sélectioné",
+            placeholder = "Aucun fichier sélectionné",
             capture = NULL),
           htmlOutput("statut_data_gaules"),
           htmlOutput("error_data_gaules"),
@@ -681,7 +681,7 @@ server <- function(input, output,session) {
     # Afficher la boîte de dialogue modale pour confirmation
     showModal(modalDialog(
       title = "Confirmation",
-      "Êtes-vous sûr de vouloir fermer l'applictaion ?",
+      "Êtes-vous sûr de vouloir fermer l'application ?",
       footer = tagList(
         modalButton("Annuler"),
         actionButton("confirm_close", "Confirmer", class = "btn-primary")
