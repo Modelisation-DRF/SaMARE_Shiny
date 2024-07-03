@@ -817,10 +817,10 @@ server <- function(input, output,session) {
   
   output$downloadPDF <- downloadHandler(
     filename = function() {
-      "consigne SaMARE.pdf"
+      "Aide application R du simulateur SaMARE.pdf"
     },
     content = function(file) {
-      file.copy("WWW/consigne SaMARE.pdf", file)
+      file.copy("WWW/Aide application R du simulateur SaMARE.pdf", file)
     }
   )
   
