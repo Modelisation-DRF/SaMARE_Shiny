@@ -179,7 +179,7 @@ ui <- fluidPage(
               font-family: Arial, sans-serif;
             }
             .box {
-             
+              background-color: (0, 0, 0, 0.7);
               padding: 20px;
               border-radius: 10px;
             }
@@ -194,16 +194,27 @@ ui <- fluidPage(
             column(width = 12, 
                    div(class = "box",
                        h2("À Propos De SaMARE"),
-                       p("From our initial entry into car insurance, recent expansion into homeowners and big plans for the future including renters, RV, boat and more, The Zebra is achieving our vision of a trusted partner for consumers, helping them to better manage and understand all their insurance needs through every stage of life, even in the face of the unexpected.")
+                       p("Le simulateur de croissance SaMARE est un modèle de croissance à l’échelle de l’arbre. Il est adapté pour les peuplements feuillus et mixtes de la forêt tempérée du Québec. Il prévoit l’accroissement en diamètre, la probabilité de mortalité et l’évolution de la vigueur des arbres de plus de 9,0 cm de diamètre ainsi que le recrutement de nouveaux arbres au seuil de 9,1 cm."),
+                       p("Pour plus d'informations sur le modèle SaMARE ou son utilisation, veuillez vous référer au document ci-dessous."),
+                       downloadButton("downloadPDF", "Téléchargez le fichier d'aide.")
+                   ),
+                   div(class = "box",
+                     id = "help_page",
+                     h2("Fichier d'exemple"),
+                     p("Ci-dessous, vous trouverez un exemple que vous pourriez utiliser pour la simulation."),
+                     downloadButton("downloadPDFtest", "Téléchargez le fichier test des arbres."),
+                     downloadButton("downloadPDFtestgaules", "Téléchargez le fichier test des gaules"),
+                   ),
+                   div(class = "box",
+                       h2("Contactez-nous"),
+                       p("Pour plus d'informations, contactez-nous :"),
+                       p("Recherche forestière - recherche.forestiere@mrnf.gouv.qc.ca")
                    )
             )
           )
         ),
-        id = "help_page",
-        h2("Page d'Aide"),
-        p("Pour information contacter :"),
-        p("recherche forestière - recherche.forestiere@mrnf.gouv.qc.ca"),
-        downloadButton("downloadPDF", "Télécharger le PDF"),
+        
+       
       )
     )
   )
@@ -313,11 +324,11 @@ server <- function(input, output,session) {
  
   
   # Fonction pour afficher les erreurs
-  afficher_erreurs <- function(erreurs, statut_output, erreur_output) {
+  afficher_erreurs <- function(erreurs, statut_output, erreur_output,emplacement ) {
     if (length(erreurs) != 0) {
       list_string <- paste(erreurs, collapse = ', ')
       output[[statut_output]] <- renderText({
-        HTML("<b>Les erreurs suivantes ont été détectées :</b>")
+        HTML("<b>Les erreurs suivantes ont été détectées </b><b>", emplacement, "</b>:")
       })
       output[[erreur_output]] <- renderText({
         HTML(paste("<span style='color:red;'>", list_string, "</span>"))
@@ -357,14 +368,14 @@ server <- function(input, output,session) {
   
   validate_files <- function() {
     if (is.null(input$file)) {
-      afficher_erreurs("Le fichier data est manquant.", "statut_data_gaules", "error_data_gaules")
+      afficher_erreurs("Le fichier data est manquant.", "statut_data_gaules", "error_data_gaules","")
       return()
     }
     processed_absent(trouver_noms_absents(data()))
     valider_data(valide_data(data()))
     
-    afficher_erreurs(processed_absent(), "statut_data", "error_data")
-    afficher_erreurs(valider_data(), "statut", "error")
+    afficher_erreurs(processed_absent(), "statut_data", "error_data", "dans le fichier des arbres")
+    afficher_erreurs(valider_data(), "statut", "error", "dans le fichier des arbres")
     
     if(input$RecruesGaules ==1 && !is.null(input$gauleFile)){
       
@@ -372,9 +383,9 @@ server <- function(input, output,session) {
       valider_data_gaules (valide_data_gaules(gaule_data()))
       valider_placette_gaules(valide_placette_gaules(data_arbre = data(), data_gaules = gaule_data()))
       
-      afficher_erreurs(processed_absent_gaules(), "statut_data_gaules", "error_data_gaules")
-      afficher_erreurs(valider_data_gaules(), "statut_data_gaules_vall", "error_data_gaules_vall")
-      afficher_erreurs(valider_placette_gaules(), "statut_data_gaules_plac", "error_data_gaules_plac")
+      afficher_erreurs(processed_absent_gaules(), "statut_data_gaules", "error_data_gaules", "dans le fichier des gaules")
+      afficher_erreurs(valider_data_gaules(), "statut_data_gaules_vall", "error_data_gaules_vall", "dans le fichier des gaules")
+      afficher_erreurs(valider_placette_gaules(), "statut_data_gaules_plac", "error_data_gaules_plac","dans le fichier des gaules")
       
      # print(length(processed_absent_gaules()))
       # print('valide gaules', length(valider_data_gaules()))
@@ -493,7 +504,7 @@ server <- function(input, output,session) {
         tags$br(),
         selectInput("Sortie",
                     label = "Choix de la sortie",
-                    choices = c("Arbre par itération" = "arbre_par_iteration", "Sommaire dendrométrique par itération" = "dendro_par_iteration", "Sommaire dendrométrique par placette" = "dendro_par_placette", "À l'échelle du billon"="echelle_billon")
+                    choices = c("Arbre par itération" = "arbre_par_iteration", "Sommaire dendrométrique par itération" = "dendro_par_iteration", "Sommaire dendrométrique par placette" = "dendro_par_placette", "À l'échelle du billon"="echelle_billon", "Sommaire Classes DHP" = "Sommaire_Classes_DHP")
       ),  
       tags$br(),
       
@@ -666,13 +677,23 @@ server <- function(input, output,session) {
     
   })
   
-  observe({
-    if (input$close > 0) {
-      # Ferme toutes les session de R
-      stopSimulation()
-      # Arrete la shiny
-      stopApp()
-    }
+  observeEvent(input$close, {
+    # Afficher la boîte de dialogue modale pour confirmation
+    showModal(modalDialog(
+      title = "Confirmation",
+      "Êtes-vous sûr de vouloir fermer l'applictaion ?",
+      footer = tagList(
+        modalButton("Annuler"),
+        actionButton("confirm_close", "Confirmer", class = "btn-primary")
+      )
+    ))
+  })
+  
+  observeEvent(input$confirm_close,{
+    stopSimulation()
+    # Arrete la shiny
+    stopApp()
+    
   })
 
   observeEvent(input$Sortie,{
@@ -718,6 +739,10 @@ server <- function(input, output,session) {
            "dendro_par_iteration" = {
              processed_Simul(SortieDendroIterSamare(SimulHtVol = processed_data_htvol(), simplifier = simplifier))
            },
+           "Sommaire_Classes_DHP"= {
+             processed_Simul(Sommaire_Classes_DHP(SimulHtVol = processed_data_htvol(), simplifier = simplifier))
+           },
+           
          
            default = {
              # Gérer le cas par défaut. Peut-être afficher un message ou effectuer une autre action par défaut.
@@ -798,6 +823,29 @@ server <- function(input, output,session) {
       file.copy("WWW/consigne SaMARE.pdf", file)
     }
   )
+  
+  output$downloadPDFtest <- downloadHandler(
+    filename = function() {
+      "Test2500m2.csv"
+    },
+    content = function(file) {
+      file.copy("WWW/Test2500m2.csv", file)
+    }
+  )
+  
+  output$downloadPDFtestgaules <- downloadHandler(
+    filename = function() {
+      "GaulesTest2500m2.csv"
+    },
+    content = function(file) {
+      file.copy("WWW/GaulesTest2500m2.csv", file)
+    }
+  )
+  
+  
+  
+  
+  
   
   observeEvent(input$help_btn, {
     updateNavbarPage(session, "all_pages", selected = "Aide")
