@@ -321,7 +321,7 @@ server <- function(input, output,session) {
   graph<- reactiveVal(NULL)
   vevifier_meteo<- reactiveVal(NULL)
   placette <- reactiveVal(NULL)
- 
+  isFile <- reactiveValues(flag = FALSE)
   
   # Fonction pour afficher les erreurs
   afficher_erreurs <- function(erreurs, statut_output, erreur_output,emplacement ) {
@@ -351,8 +351,7 @@ server <- function(input, output,session) {
   
   observeEvent(input$file, {
     output$dynamic_mainpanel <- renderUI({ tableOutput("table") })
-    
-    
+    isFile$flag<-TRUE
     validate_files()
   })
   
@@ -405,7 +404,7 @@ server <- function(input, output,session) {
     input$NbIter
    
     output$conditionalButton <- renderUI({
-      if (!is.null(input$file)  && !is.na(input$Horizon) && !is.na(input$NbIter) && input$NbIter > 1 && input$RecruesGaules ==0 && length(processed_absent()) == 0 && length(valider_data()) == 0) {
+      if (!is.null(input$file)  && !is.na(input$Horizon) && !is.na(input$NbIter) && input$NbIter > 1 && input$RecruesGaules ==0 && length(processed_absent()) == 0 && length(valider_data()) == 0 && isFile$flag) {
         placette(unique(data()$Placette))
         actionButton("simulateButton", "Simulation")
        
@@ -422,6 +421,7 @@ server <- function(input, output,session) {
 
   
   observeEvent(input$simulateButton, {
+    isFile$flag<-FALSE
     
     simulation_status("Simulation en cours...")
    
@@ -615,9 +615,25 @@ server <- function(input, output,session) {
     graph(NULL)
     vevifier_meteo(NULL)
     removeModal()
+    
+    #updateFileInput(session, "file", value = NULL)
+    updateNumericInput(session, "Horizon", value = NA)
+    updateRadioButtons(session, "RecruesGaules", selected = 0)
+    #updateFileInput(session, "gauleFile", value = NULL)
+    updateNumericInput(session, "NbIter", value = NA)
+    updateRadioButtons(session, "corticale", selected = 0)
+    updateSelectInput(session, "variable", selected = NULL)
+    updatePickerInput(session, "placette", selected = NULL)
+    
+    # updateFileInput(session, "file", label = "Données d'inventaire de départ (format csv)", placeholder = "Aucun fichier sélectionné")
+    # updateFileInput(session, "gauleFile", label = "Dénombrement des gaules (format csv)", placeholder = "Aucun fichier sélectionné")
+    
+    
     output$dynamic_mainpanel <- renderUI({
      NULL
     })
+    
+    
     output$dynamic_sidebar <- renderUI({
       
       sidebarPanel(
