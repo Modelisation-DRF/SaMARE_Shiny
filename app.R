@@ -404,11 +404,11 @@ server <- function(input, output,session) {
     input$NbIter
    
     output$conditionalButton <- renderUI({
-      if (!is.null(input$file)  && !is.na(input$Horizon) && !is.na(input$NbIter) && input$NbIter > 1 && input$RecruesGaules ==0 && length(processed_absent()) == 0 && length(valider_data()) == 0 && isFile$flag) {
+      if (!is.null(input$file)  && !is.na(input$Horizon)&& input$Horizon >=5 && !is.na(input$NbIter) && input$NbIter > 1 && input$RecruesGaules ==0 && length(processed_absent()) == 0 && length(valider_data()) == 0 && isFile$flag && input$Horizon %% 5 ==0 ) {
         placette(unique(data()$Placette))
         actionButton("simulateButton", "Simulation")
        
-      }else if(!is.null(input$file)  && !is.na(input$ Horizon) && !is.na(input$NbIter) && input$NbIter > 1 && input$RecruesGaules ==1 && !is.null(input$gauleFile) && length(processed_absent()) == 0 && length(valider_data()) == 0 && length(processed_absent_gaules()) == 0 && length(valider_data_gaules()) == 0 && length(valider_placette_gaules()) == 0){
+      }else if(!is.null(input$file)  && !is.na(input$ Horizon) && input$Horizon >=5 && !is.na(input$NbIter) && input$NbIter > 1 && input$RecruesGaules ==1 && !is.null(input$gauleFile) && length(processed_absent()) == 0 && length(valider_data()) == 0 && length(processed_absent_gaules()) == 0 && length(valider_data_gaules()) == 0 && length(valider_placette_gaules()) == 0 && input$Horizon %% 5 ==0 ){
         placette(unique(data()$Placette))
         actionButton("simulateButton", "Simulation")
        
