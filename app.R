@@ -254,7 +254,7 @@ server <- function(input, output,session) {
       htmlOutput("statut_data"),
       htmlOutput("error_data"),
       numericInput("Horizon", "Nombre d'années de simulation (multiple de 5)",min = 5 ,value = NA, step = 5),
-      radioButtons("RecruesGaules", "Recrutement basé sur les gaules",
+      radioButtons("RecruesGaules", "Recrutement basé sur les gaules pour les érablières",
                    choices = list("Oui" = 1, "Non" = 0),
                    selected = 0,
                    inline = TRUE),
@@ -396,7 +396,7 @@ server <- function(input, output,session) {
   
   
 
-
+  
   observe({
     # Réagir aux changements dans les inputs
     input$RecruesGaules
@@ -494,6 +494,9 @@ server <- function(input, output,session) {
           )
         ),
         
+        actionButton("valider", "Valider votre choix"),
+        tags$br(),
+        tags$br(),
         downloadButton("downloadPlot", "Télécharger le Graphique"),
         tags$br(),
         tags$br(),
@@ -553,7 +556,7 @@ server <- function(input, output,session) {
   })
 
 
-  observeEvent(input$placette, {
+  observeEvent(input$valider, {
     mettre_a_jour_graphique()
   })
 
@@ -653,7 +656,7 @@ server <- function(input, output,session) {
         htmlOutput("statut_data"),
         htmlOutput("error_data"),
         numericInput("Horizon", "Nombre d'années de simulation (multiple de 5)",min = 5 ,value = NA, step = 5),
-        radioButtons("RecruesGaules", "Recrutement basé sur les gaules",
+        radioButtons("RecruesGaules", "Recrutement basé sur les gaules pour les érablières",
                      choices = list("Oui" = 1, "Non" = 0),
                      selected = 0,
                      inline = TRUE),
