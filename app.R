@@ -719,13 +719,13 @@ server <- function(input, output,session) {
     
     if(input$Sortie == "echelle_billon" && !is.null(input$Sortie)) {
       req(input$typeBillonnage)
-      processed_Billonage(SIMBillonnageABCD_DHP(data= processed_data_htvol(), type = input$typeBillonnage))
+      processed_Billonage(SortieBillonage(Data= processed_data_htvol(), Type = input$typeBillonnage))
     }
   })
   
   observeEvent(input$typeBillonnage,{
     if(input$Sortie == "echelle_billon" && !is.null(input$Sortie)) {
-      processed_Billonage(SIMBillonnageABCD_DHP(data= processed_data_htvol(), type = input$typeBillonnage))
+      processed_Billonage(SortieBillonage(Data= processed_data_htvol(), Type = input$typeBillonnage))
     }
   })
   
