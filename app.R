@@ -25,7 +25,7 @@ for (i in Model_install) {
   if (!require(i, character.only = TRUE)) {
     if (i == "TarifQC") {
       install.packages(
-        "./Packages/TarifQC_1.1.5.tar.gz",
+        "./Packages/TarifQC_1.1.6.tar.gz",
         repos = NULL,
         type = "source",
         dependencies = TRUE
@@ -50,7 +50,7 @@ for (i in Model_install) {
     }
     if (i == "ExtractMap") {
       install.packages(
-        "./Packages/ExtractMap_1.1.3.tar.gz",
+        "./Packages/ExtractMap_1.3.0.tar.gz",
         repos = NULL,
         type = "source",
         dependencies = TRUE
@@ -238,6 +238,7 @@ server <- function(input, output,session) {
      #pannel principale 
     
     sidebarPanel(
+     
       
       fileInput( 
       inputId="file",
@@ -405,11 +406,11 @@ server <- function(input, output,session) {
    
     output$conditionalButton <- renderUI({
       if (!is.null(input$file)  && !is.na(input$Horizon)&& input$Horizon >=5 && !is.na(input$NbIter) && input$NbIter > 1 && input$RecruesGaules ==0 && length(processed_absent()) == 0 && length(valider_data()) == 0 && isFile$flag && input$Horizon %% 5 ==0 ) {
-        placette(unique(data()$Placette))
+        #placette(unique(data()$Placette))
         actionButton("simulateButton", "Simulation")
        
       }else if(!is.null(input$file)  && !is.na(input$ Horizon) && input$Horizon >=5 && !is.na(input$NbIter) && input$NbIter > 1 && input$RecruesGaules ==1 && !is.null(input$gauleFile) && length(processed_absent()) == 0 && length(valider_data()) == 0 && length(processed_absent_gaules()) == 0 && length(valider_data_gaules()) == 0 && length(valider_placette_gaules()) == 0 && input$Horizon %% 5 ==0 ){
-        placette(unique(data()$Placette))
+        #placette(unique(data()$Placette))
         actionButton("simulateButton", "Simulation")
        
         
@@ -444,7 +445,7 @@ server <- function(input, output,session) {
           processed_Simul(SimulSaMARE(NbIter=input$NbIter, Horizon= (input$Horizon/5),RecruesGaules= input$RecruesGaules, Data = vevifier_meteo(), MCH = input$corticale))
         } 
         
-        
+        placette(unique(processed_Simul()$Placette))
         Sys.sleep(5) 
         
        
@@ -468,36 +469,52 @@ server <- function(input, output,session) {
         
         textOutput("simulationStatus"),
         tags$br(),
-        radioButtons("graphType", "Type de graphiques à créer:",
-                     choices = list("Évolution des variables par placette" ,
-                                    "Distribution diamétrale moyenne" )),
-        tags$br(),
-        selectInput("Espece", "Groupe d'espèces", choices = c("" )),
         
+        switchInput(
+          inputId = "affichegraph",
+          label = "Afficher le graphique",         
+          onLabel = "oui",
+          offLabel = "non",
+          value = FALSE
+        ),
+        
+      
         conditionalPanel(
-          condition = "input.graphType == 'Évolution des variables par placette'",
-        selectInput("variable", "Choix de la variable", choices = c("ST_HA", "Vol_HA", "DQM","HDomM", "nbTi_HA"))
-        ),
-        pickerInput(
-          inputId = "placette", 
-          label = "Choix des placettes", 
-          choices = placette(), 
-         
-          # options = list(`actions-box` = TRUE), 
-          selected = placette(),
-          multiple = TRUE,
-          options = list(
-            `actions-box` = TRUE,
-            `deselect-all-text` = "Tout supprimer",
-            `select-all-text` = "Tout sélectionner",
-            `none-selected-text` = "Rien de sélectionné"
-          )
-        ),
+          condition = "input.affichegraph == true",
+          
+          radioButtons("graphType", "Type de graphiques à créer:",
+                       choices = list("Évolution des variables par placette",
+                                      "Distribution diamétrale moyenne")),
+          tags$br(),
+          
+          selectInput("Espece", "Groupe d'espèces", choices = c("")),
+          
         
-        actionButton("valider", "Valider votre choix"),
-        tags$br(),
-        tags$br(),
-        downloadButton("downloadPlot", "Télécharger le Graphique"),
+          conditionalPanel(
+            condition = "input.graphType == 'Évolution des variables par placette'",
+            selectInput("variable", "Choix de la variable", 
+                        choices = c("ST_HA", "Vol_HA", "DQM", "HDomM", "nbTi_HA"))
+          ),
+          
+          pickerInput(
+            inputId = "placette", 
+            label = "Choix des placettes", 
+            choices = placette(), 
+            selected = placette(),
+            multiple = TRUE,
+            options = list(
+              `actions-box` = TRUE,
+              `deselect-all-text` = "Tout supprimer",
+              `select-all-text` = "Tout sélectionner",
+              `none-selected-text` = "Rien de sélectionné"
+            )
+          ),
+          
+          actionButton("valider", "Valider votre choix"),
+          tags$br(),
+          tags$br(),
+          downloadButton("downloadPlot", "Télécharger le Graphique")
+        ),
         tags$br(),
         tags$br(),
         radioButtons("simplifier", "Toutes les années de simulation",
@@ -507,14 +524,16 @@ server <- function(input, output,session) {
         tags$br(),
         selectInput("Sortie",
                     label = "Choix de la sortie",
-                    choices = c("Arbre par itération" = "arbre_par_iteration", "Sommaire dendrométrique par itération" = "dendro_par_iteration", "Sommaire dendrométrique par placette" = "dendro_par_placette", "À l'échelle du billon"="echelle_billon", "Sommaire classes DHP" = "Sommaire_Classes_DHP")
+                    choices = c("Arbre par itération" = "arbre_par_iteration", "Sommaire dendrométrique par itération" = "dendro_par_iteration", "Sommaire dendrométrique par placette" = "dendro_par_placette", "À l'échelle du billon"="echelle_billon", "Sommaire classes DHP" = "Sommaire_Classes_DHP", "test"="test"),
+                    selected = "arbre_par_iteration"
       ),  
       tags$br(),
       
       conditionalPanel(
         condition = "input.Sortie == 'echelle_billon'", 
         selectInput("typeBillonnage", "Type de Billonnage :",
-                     choices = list("DHP_Régionalisé" = "DHP", "ABCD_Régionalisé" = "ABCD", "1234_Provincial" = "1234", "MSCR_Provincial" = "MSCR","DHP_Provincial" = "DHP2015", "ABCD_Provincial" = "ABCD2015")
+                     choices = list("DHP_Régionalisé" = "DHP", "ABCD_Régionalisé" = "ABCD", "1234_Provincial" = "1234", "MSCR_Provincial" = "MSCR","DHP_Provincial" = "DHP2015", "ABCD_Provincial" = "ABCD2015"),
+                    selected = "DHP"
                     )
       ),
         downloadButton("download", "Télécharger le résultat"),
@@ -542,9 +561,15 @@ server <- function(input, output,session) {
   
   # Fonction pour mettre à jour le graphique
   mettre_a_jour_graphique <- function() {
+    if(input$affichegraph == T){
     graph(Graph(SimulHtVol = processed_data_htvol(), Espece = input$Espece, Variable = input$variable, listePlacette = input$placette))
+    }
+    
   }
   
+  observeEvent(input$affichegraph, {
+    mettre_a_jour_graphique()
+  })
  
   observeEvent(input$Espece, {
     mettre_a_jour_graphique()
@@ -563,18 +588,18 @@ server <- function(input, output,session) {
   
   
   output$plot <- renderPlot({
-    # Ici, on suppose que `Graph` renvoie une liste de deux éléments graphiques
+   
     
     graphiques <- graph()
     
-    # Utiliser input$graphType pour décider quel graphique afficher
+   
     if(input$graphType == "Évolution des variables par placette") {
       graph_to_print (graphiques[[1]])
     } else {
       graph_to_print(graphiques[[2]])
     }
     
-    # Afficher le graphique sélectionné
+   
     print(graph_to_print())
   })
   
@@ -760,6 +785,9 @@ server <- function(input, output,session) {
            },
            "Sommaire_Classes_DHP"= {
              processed_Simul(Sommaire_Classes_DHP(SimulHtVol = processed_data_htvol(), simplifier = simplifier))
+           },
+           "test" ={
+             processed_Simul(processed_data_htvol())
            },
            
          
