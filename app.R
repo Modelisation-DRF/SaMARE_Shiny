@@ -42,7 +42,7 @@ for (i in Model_install) {
     }
     if (i == "SimulateurSaMARE") {
       install.packages(
-        "./Packages/SimulateurSaMARE_2.1.0.tar.gz",
+        "./Packages/SimulateurSaMARE_2.3.0.tar.gz",
         repos = NULL,
         type = "source",
         dependencies = TRUE
@@ -143,7 +143,7 @@ ui <- fluidPage(
       img(src = "SaMARE_MRNF_Final.jpg", height = 50, width = 70), # logo de Samare
       div(
         id = "main_app",
-        tags$div(style = "font-size: 10px;", "Version 2.1.0"),
+        tags$div(style = "font-size: 10px;", "SaMARE 2.3.0"),
         sidebarLayout(
           uiOutput("dynamic_sidebar"),
           mainPanel(
@@ -548,10 +548,18 @@ server <- function(input, output,session) {
     output$dynamic_mainpanel <- renderUI({
       
      
-       
+       if(input$affichegraph == T){
+         
+      
+         
         tabsetPanel(type = "tabs",
                     tabPanel("Graphique", plotOutput("plot"))
         )
+       }else{
+         
+         div("")
+       }
+         
       
     })
     
