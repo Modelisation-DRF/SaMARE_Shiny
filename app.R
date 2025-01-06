@@ -9,9 +9,10 @@
 
 options(repos = c(CRAN = "https://cloud.r-project.org"))
 # Vérifie si les packages nécessaires sont installés et les ajoute si besoin
-required_packages <- c("shiny", "shinyjs", "shinyFiles", "shinydashboard", "shinythemes", "mvtnorm",
-                       "tidyverse", "doFuture", "doRNG", "readxl",
-                       "sas7bdat", "miceadds", "dplyr", "reticulate", "future.apply", "rlang","sf", "rockchalk", "shinyWidgets")
+
+required_packages <- c("shiny", "shinyjs", "shinyFiles", "shinydashboard", "shinythemes", "mvtnorm","tidyverse", 
+                       "doFuture", "doRNG", "readxl","sas7bdat", "miceadds", "dplyr", "reticulate", "future.apply", 
+                       "rlang","sf", "rockchalk", "shinyWidgets")
 for (i in required_packages) {
   if (!require(i, character.only = TRUE)) {
     install.packages(i, dependencies = TRUE)
@@ -143,7 +144,7 @@ ui <- fluidPage(
       img(src = "SaMARE_MRNF_Final.jpg", height = 50, width = 70), # logo de Samare
       div(
         id = "main_app",
-        tags$div(style = "font-size: 10px;", "SaMARE 2.3.0"),
+        tags$div(style = "font-size: 10px;", "SaMARE 2.3.1"),
         sidebarLayout(
           uiOutput("dynamic_sidebar"),
           mainPanel(
