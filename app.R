@@ -876,7 +876,7 @@ server <- function(input, output,session) {
       "Aide application R du simulateur SaMARE.pdf"
     },
     content = function(file) {
-      file.copy("WWW/Aide application R du simulateur SaMARE_v5.pdf", file)
+      file.copy("WWW/Aide application R du simulateur SaMARE_v6.pdf", file)
     }
   )
   
