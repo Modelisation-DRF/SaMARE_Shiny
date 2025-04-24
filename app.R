@@ -21,45 +21,45 @@ for (i in required_packages) {
 }
 
 # Installe ces packages stockés dans le dossier de la shiny (non disponibles sur le CRAN)
-Model_install <- c("TarifQC","Billonage", "SimulateurSaMARE", "ExtractMap")
-for (i in Model_install) {
-  if (!require(i, character.only = TRUE)) {
-    if (i == "TarifQC") {
-      install.packages(
-        "./Packages/TarifQC_1.1.6.tar.gz",
-        repos = NULL,
-        type = "source",
-        dependencies = TRUE
-      )
-    }
-    
-    if (i == "Billonage") {
-      install.packages(
-        "./Packages/Billonage_0.1.0.tar.gz",
-        repos = NULL,
-        type = "source",
-        dependencies = TRUE
-      )
-    }
-    if (i == "SimulateurSaMARE") {
-      install.packages(
-        "./Packages/SimulateurSaMARE_2.3.0.tar.gz",
-        repos = NULL,
-        type = "source",
-        dependencies = TRUE
-      )
-    }
-    if (i == "ExtractMap") {
-      install.packages(
-        "./Packages/ExtractMap_1.3.0.tar.gz",
-        repos = NULL,
-        type = "source",
-        dependencies = TRUE
-      )
-    }
-    require(i, character.only = TRUE)
-  }
-}
+# Model_install <- c("TarifQC","Billonage", "SimulateurSaMARE", "ExtractMap")
+# for (i in Model_install) {
+#   if (!require(i, character.only = TRUE)) {
+#     if (i == "TarifQC") {
+#       install.packages(
+#         "./Packages/TarifQC_1.1.6.tar.gz",
+#         repos = NULL,
+#         type = "source",
+#         dependencies = TRUE
+#       )
+#     }
+#     
+#     if (i == "Billonage") {
+#       install.packages(
+#         "./Packages/Billonage_0.1.0.tar.gz",
+#         repos = NULL,
+#         type = "source",
+#         dependencies = TRUE
+#       )
+#     }
+#     if (i == "SimulateurSaMARE") {
+#       install.packages(
+#         "./Packages/SimulateurSaMARE_2.3.0.tar.gz",
+#         repos = NULL,
+#         type = "source",
+#         dependencies = TRUE
+#       )
+#     }
+#     if (i == "ExtractMap") {
+#       install.packages(
+#         "./Packages/ExtractMap_1.3.0.tar.gz",
+#         repos = NULL,
+#         type = "source",
+#         dependencies = TRUE
+#       )
+#     }
+#     require(i, character.only = TRUE)
+#   }
+# }
 
 
 
@@ -144,7 +144,7 @@ ui <- fluidPage(
       img(src = "SaMARE_MRNF_Final.jpg", height = 50, width = 70), # logo de Samare
       div(
         id = "main_app",
-        tags$div(style = "font-size: 10px;", "SaMARE 2.3.1"),
+        tags$div(style = "font-size: 10px;", "SaMARE 2.3.3"),
         sidebarLayout(
           uiOutput("dynamic_sidebar"),
           mainPanel(
@@ -876,7 +876,7 @@ server <- function(input, output,session) {
       "Aide application R du simulateur SaMARE.pdf"
     },
     content = function(file) {
-      file.copy("WWW/Aide application R du simulateur SaMARE_v6.pdf", file)
+      file.copy("WWW/Aide application R du simulateur SaMARE.pdf", file)
     }
   )
   
