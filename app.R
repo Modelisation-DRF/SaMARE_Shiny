@@ -66,11 +66,12 @@ for (i in required_packages) {
 library(shiny)
 library(readr)
 library(shinyjs)
-library(SimulateurSaMARE )
+library(SimulateurSaMARE)
 library(Billonage)
 library(ExtractMap)
 library(sf)
 library(shinyWidgets)
+library(OutilsDRF)
 # Define UI for application that draws a histogram
 
 ui <- fluidPage(
@@ -537,6 +538,60 @@ server <- function(input, output,session) {
                     selected = "DHP"
                     )
       ),
+      conditionalPanel(
+        condition = "input.Sortie == 'echelle_billon'",
+        h5("Paramètres Sybille", style = "color: #856404; font-weight: bold; margin-top: 15px;"),
+        # DHS parameter
+        div(
+          style = "margin-bottom: 10px;",
+          numericInput("dhs_input",
+                       label = "DHS (Diamètre à hauteur de souche):",
+                       value = 0.15,
+                       min = 0.01,
+                       max = 1.0,
+                       step = 0.01)
+        ),
+        # Grade 1 parameters
+        div(
+          style = "background-color: #f8f9fa; padding: 10px; border-radius: 5px; margin-bottom: 10px;",
+          h6("Grade 1", style = "color: #495057; font-weight: bold;"),
+          textInput("nom_grade1", "Nom du grade 1:", value = "sciage court"),
+          selectInput("long_grade1", "Longueur (pieds):",
+                      choices = c("Indéfini", "4", "8", "12"),
+                      selected = "8"),
+          numericInput("diam_grade1", "Diamètre au fin bout(cm):",
+                       value = 20, min = 0, max = 100, step = 0.1)
+        ),
+        # Grade 2 parameters
+        div(
+          style = "background-color: #f8f9fa; padding: 10px; border-radius: 5px; margin-bottom: 10px;",
+          h6("Grade 2", style = "color: #495057; font-weight: bold;"),
+          textInput("nom_grade2", "Nom du grade 2:", value = "pate"),
+          selectInput("long_grade2", "Longueur (pieds):",
+                      choices = c("", "Indéfini", "4", "8", "12"),
+                      selected = "4"),
+          numericInput("diam_grade2", "Diamètre au fin bout(cm):",
+                       value = 8, min = 0, max = 100, step = 0.1)
+        ),
+        # Grade 3 parameters
+        div(
+          style = "background-color: #f8f9fa; padding: 10px; border-radius: 5px; margin-bottom: 10px;",
+          h6("Grade 3", style = "color: #495057; font-weight: bold;"),
+          textInput("nom_grade3", "Nom du grade 3:", value = ""),
+          selectInput("long_grade3", "Longueur (pieds):",
+                      choices = c("", "Indéfini", "4", "8", "12"),
+                      selected = NULL),
+          numericInput("diam_grade3", "Diamètre au fin bout(cm):",
+                       value = NA, min = 0, max = 100, step = 0.1)
+        ),
+        div(
+          style = "margin-top: 15px; text-align: center;",
+          actionButton("calculer_billonnage",
+                       "Calculer le billonnage",
+                       style = "background-color: #28a745; color: white; width: 100%;",
+                       icon = icon("calculator"))
+        )
+      ),
         downloadButton("download", "Télécharger le résultat"),
       tags$br(),
       tags$br(),
@@ -547,23 +602,16 @@ server <- function(input, output,session) {
     })
 
     output$dynamic_mainpanel <- renderUI({
-      
-     
-       if(input$affichegraph == T){
-         
-      
-         
+      # Vérifier que input$affichegraph existe et n'est pas NULL
+      if(!is.null(input$affichegraph) && input$affichegraph == TRUE){
         tabsetPanel(type = "tabs",
                     tabPanel("Graphique", plotOutput("plot"))
         )
-       }else{
-         
-         div("")
-       }
-         
-      
+      }else{
+        div("")
+      }
     })
-    
+
     simulation_status("Simulation terminée. Vous pouvez maintenant télécharger le résultat.")
     
   })
@@ -753,14 +801,123 @@ server <- function(input, output,session) {
     
     if(input$Sortie == "echelle_billon" && !is.null(input$Sortie)) {
       req(input$typeBillonnage)
-      processed_Billonage(SortieBillonage(Data= processed_data_htvol(), Type = input$typeBillonnage))
+      processed_Billonage(SortieBillonnage(Data= processed_data_htvol(), Type = input$typeBillonnage))
     }
   })
   
-  observeEvent(input$typeBillonnage,{
-    if(input$Sortie == "echelle_billon" && !is.null(input$Sortie)) {
-      processed_Billonage(SortieBillonage(Data= processed_data_htvol(), Type = input$typeBillonnage))
+  observeEvent(input$calculer_billonnage, {
+    # Vérifier SEULEMENT les paramètres de base requis pour Shiny
+    req(input$dhs_input, input$typeBillonnage, processed_data_htvol())
+    
+    # Validation minimale : s'assurer qu'au moins le nom du Grade 1 n'est pas vide
+    if(is.null(input$nom_grade1) || input$nom_grade1 == "") {
+      showNotification("Le nom du Grade 1 est obligatoire",
+                       type = "error", duration = 5)
+      return()
     }
+    
+    # PAR un progress bar qui englobe tout le calcul:
+    withProgress(message = 'Calcul du billonnage en cours...', value = 0, {
+      
+      incProgress(0.1, detail = "Validation des paramètres...")
+      
+      # Conversion des types (permettre NA pour tous les grades)
+      dhs_val <- as.numeric(input$dhs_input)
+      
+      # Gestion des longueurs avec menu déroulant
+      long_grade1_val <- if(is.null(input$long_grade1) || input$long_grade1 == "Indéfini" || input$long_grade1 == "") {
+        NA_real_
+      } else {
+        as.numeric(input$long_grade1)
+      }
+      
+      long_grade2_val <- if(is.null(input$long_grade2) || input$long_grade2 == "Indéfini" || input$long_grade2 == "") {
+        NA_real_
+      } else {
+        as.numeric(input$long_grade2)
+      }
+      
+      long_grade3_val <- if(is.null(input$long_grade3) || input$long_grade3 == "Indéfini" || input$long_grade3 == "") {
+        NA_real_
+      } else {
+        as.numeric(input$long_grade3)
+      }
+      
+      incProgress(0.2, detail = "Traitement des diamètres...")
+      
+      # Gestion des diamètres (maintenant numericInput avec min/max)
+      diam_grade1_val <- if(is.null(input$diam_grade1) || is.na(input$diam_grade1)) {
+        NA_real_
+      } else {
+        as.numeric(input$diam_grade1)
+      }
+      
+      diam_grade2_val <- if(is.null(input$diam_grade2) || is.na(input$diam_grade2)) {
+        NA_real_
+      } else {
+        as.numeric(input$diam_grade2)
+      }
+      
+      diam_grade3_val <- if(is.null(input$diam_grade3) || is.na(input$diam_grade3)) {
+        NA_real_
+      } else {
+        as.numeric(input$diam_grade3)
+      }
+      
+      incProgress(0.3, detail = "Préparation des noms de grades...")
+      
+      # Gestion des noms (avec valeurs par défaut)
+      nom_grade1_val <- as.character(input$nom_grade1)
+      nom_grade2_val <- if(is.null(input$nom_grade2) || input$nom_grade2 == "") {
+        NA_character_
+      } else {
+        as.character(input$nom_grade2)
+      }
+      nom_grade3_val <- if(is.null(input$nom_grade3) || input$nom_grade3 == "") {
+        NA_character_
+      } else {
+        as.character(input$nom_grade3)
+      }
+      
+      incProgress(0.5, detail = "Exécution du calcul de billonnage...")
+      
+      # Exécuter SortieBillesFusion - laisser la fonction faire sa propre validation
+      tryCatch({
+        processed_Billonage(SortieBillesFusion(
+          Data = processed_data_htvol(),
+          Type = as.character(input$typeBillonnage),
+          dhs = dhs_val,
+          nom_grade1 = nom_grade1_val,
+          long_grade1 = long_grade1_val,
+          diam_grade1 = diam_grade1_val,
+          nom_grade2 = nom_grade2_val,
+          long_grade2 = long_grade2_val,
+          diam_grade2 = diam_grade2_val,
+          nom_grade3 = nom_grade3_val,
+          long_grade3 = long_grade3_val,
+          diam_grade3 = diam_grade3_val
+        ))
+        
+        incProgress(0.8, detail = "Finalisation...")
+        
+        # Mettre à jour processed_Simul immédiatement si l'option "echelle_billon" est sélectionnée
+        if(!is.null(input$Sortie) && input$Sortie == "echelle_billon") {
+          processed_Simul(processed_Billonage())
+        }
+        
+        incProgress(1, detail = "Terminé!")
+        
+        showNotification("Billonnage calculé avec succès!", type = "message", duration = 3)
+        
+      }, error = function(e) {
+        cat("✗ Erreur billonnage:", e$message, "\n")
+        # L'erreur de calcul_vol_bille sera affichée à l'utilisateur
+        showNotification(paste("Erreur:", e$message), type = "error", duration = 5)
+        processed_Billonage(NULL)
+        # Ne pas réinitialiser processed_Simul ici pour éviter de perdre d'autres résultats
+      })
+      
+    }) # Fin du withProgress
   })
   
   observe({
