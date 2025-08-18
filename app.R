@@ -616,12 +616,12 @@ server <- function(input, output,session) {
           style = "margin-top: 15px; text-align: center;",
           actionButton("calculer_billonnage",
                        "Calculer le billonnage",
-                       style = "background-color: #3c8dbc; color: white; width: 100%;",
+                       style = "background-color: #008000; color: white; width: 100%;",
                        icon = icon("calculator"))
         )
       ),
       downloadButton("download", "Télécharger le résultat", 
-                     style = "background-color: #3c8dbc; color: white; border-color: #3c8dbc;"),
+                     style = "background-color: #008000; color: white; border-color: #3c8dbc;"),
       tags$br(),
       tags$br(),
       actionButton("reset_button", "Réinitialiser"),
@@ -633,10 +633,10 @@ server <- function(input, output,session) {
     output$add_grade2_button <- renderUI({
       if (!show_grade2()) {
         div(
-          style = "text-align: center; margin-bottom: 15px; padding: 10px; border: 2px dashed #3c8dbc; border-radius: 5px; background-color: #f0f9ff;",
+          style = "text-align: center; margin-bottom: 15px; padding: 10px; border: 2px dashed #008000; border-radius: 5px; background-color: #f0f9ff;",
           actionButton("add_grade2",
                        "Ajouter Grade 2",
-                       style = "background-color: #3c8dbc; color: white; border: none; padding: 8px 20px; border-radius: 20px;",
+                       style = "background-color: #008000; color: white; border: none; padding: 8px 20px; border-radius: 20px;",
                        icon = icon("plus-circle"))
         )
       }
@@ -646,7 +646,7 @@ server <- function(input, output,session) {
     output$grade2_section <- renderUI({
       if (show_grade2()) {
         div(
-          style = "background-color: #f8f9fa; padding: 15px; border-radius: 5px; margin-bottom: 10px; position: relative; border-left: 4px solid #3c8dbc; animation: fadeIn 0.3s ease-in;",
+          style = "background-color: #f8f9fa; padding: 15px; border-radius: 5px; margin-bottom: 10px; position: relative; border-left: 4px solid #008000; animation: fadeIn 0.3s ease-in;",
           
           tags$style(HTML("
         @keyframes fadeIn {
@@ -665,7 +665,7 @@ server <- function(input, output,session) {
                          title = "Supprimer le Grade 2 (et Grade 3 si présent)")
           ),
           
-          h6("Grade 2", style = "color: #3c8dbc; font-weight: bold; margin-right: 40px;"),
+          h6("Grade 2", style = "color: #008000; font-weight: bold; margin-right: 40px;"),
           p("(Optionnel)", style = "font-size: 0.8em; color: #6c757d; margin: 0 0 15px 0;"),
           
           textInput("nom_grade2", "Nom du grade 2:", value = "pate"),
@@ -681,10 +681,10 @@ server <- function(input, output,session) {
     output$add_grade3_button <- renderUI({
       if (show_grade2() && !show_grade3()) {
         div(
-          style = "text-align: center; margin-bottom: 15px; padding: 10px; border: 2px dashed #3c8dbc; border-radius: 5px; background-color: #f0f9ff;",
+          style = "text-align: center; margin-bottom: 15px; padding: 10px; border: 2px dashed #008000; border-radius: 5px; background-color: #f0f9ff;",
           actionButton("add_grade3",
                        "Ajouter Grade 3",
-                       style = "background-color: #3c8dbc; color: white; border: none; padding: 8px 20px; border-radius: 20px;",
+                       style = "background-color: #008000; color: white; border: none; padding: 8px 20px; border-radius: 20px;",
                        icon = icon("plus-circle"))
         )
       }
@@ -694,7 +694,7 @@ server <- function(input, output,session) {
     output$grade3_section <- renderUI({
       if (show_grade3()) {
         div(
-          style = "background-color: #f8f9fa; padding: 15px; border-radius: 5px; margin-bottom: 10px; position: relative; border-left: 4px solid #3c8dbc; animation: fadeIn 0.3s ease-in;",
+          style = "background-color: #f8f9fa; padding: 15px; border-radius: 5px; margin-bottom: 10px; position: relative; border-left: 4px solid #008000; animation: fadeIn 0.3s ease-in;",
           
           # Bouton X stylisé
           div(
@@ -706,7 +706,7 @@ server <- function(input, output,session) {
                          title = "Supprimer le Grade 3")
           ),
           
-          h6("Grade 3", style = "color: #3c8dbc; font-weight: bold; margin-right: 40px;"),
+          h6("Grade 3", style = "color: #008000; font-weight: bold; margin-right: 40px;"),
           p("(Optionnel)", style = "font-size: 0.8em; color: #6c757d; margin: 0 0 15px 0;"),
           
           textInput("nom_grade3", "Nom du grade 3:", value = ""),
