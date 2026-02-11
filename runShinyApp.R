@@ -111,10 +111,9 @@ packages_cran <- c(
 # Packages GitHub requis par SaMARE (tous sur Modelisation-DRF)
 packages_github <- c(
   "SimulateurSaMARE",
-  "Billonage",
+  "BillonnagePetro",
   "ExtractMap",
-  "OutilsDRF",
-  "TarifQC"
+  "OutilsDRF"
 )
 
 # ============================================================================
