@@ -21,9 +21,9 @@ SaMARE_Application/
 ├── runShinyApp.R              ← Script de démarrage R
 │
 ├── app/                       ← Dossier de l'application Shiny
-│   ├── app.R                  ← Application principale (modifiée)
+│   ├── app.R                  ← Application principale 
 │   ├── app_diagnostic.R       ← Application de diagnostic/installation
-│   └── www/                   ← Ressources web (renommer WWW → www)
+│   └── www/                   ← Ressources web 
 │       ├── SaMARE_MRNF_Final.jpg
 │       ├── Aide2.webp
 │       ├── Aide application R du simulateur SaMARE.pdf
@@ -41,7 +41,6 @@ SaMARE_Application/
 
 1. Créer un dossier `SaMARE_Application` (ou autre nom)
 2. Y placer tous les fichiers fournis selon la structure ci-dessus
-3. **Important** : Renommer le dossier `WWW` en `www` (minuscule)
 
 ### Étape 2 : Packages requis
 
@@ -102,69 +101,3 @@ remotes::install_github("Modelisation-DRF/TarifQC")
 | Modification de la fermeture | Fermeture propre sans `taskkill` |
 | Chemins `WWW` → `www` | Convention standard Shiny |
 
----
-
-## Recherche automatique de R
-
-Le fichier `_launcher.bat` cherche R automatiquement dans cet ordre :
-
-1. `C:\Logiciels\R-*` (installation MRNF)
-2. `C:\Program Files\R\R-*` (installation standard)
-3. `C:\Program Files (x86)\R\R-*` (32-bit)
-4. Variable d'environnement `R_HOME`
-
-Si R n'est pas trouvé, un message d'erreur s'affiche.
-
----
-
-## Résolution de problèmes
-
-### L'application est lente
-
-**Cause possible :** Mauvaise configuration du VBS
-
-**Solution :** Vérifier que `Lancer_SaMARE.vbs` utilise `ShowWindow = 7` (minimisé) et NON `ShowWindow = 0` (caché). Une fenêtre cachée cause des ralentissements importants.
-
-### "R non trouvé"
-
-**Solution :** 
-- Installer R depuis https://cran.r-project.org/
-- Ou ajouter le chemin R dans `_launcher.bat`
-
-### Packages manquants non détectés
-
-**Solution :** Supprimer `package_status.rds` dans le dossier `app/` et relancer
-
-### RStudio se ferme quand je clique "Fermer"
-
-**Cause :** Ancienne version de `app.R` avec `taskkill`
-
-**Solution :** Utiliser la nouvelle version de `app.R` fournie
-
-### Erreur "Rtools requis"
-
-**Solution :** Installer Rtools depuis https://cran.r-project.org/bin/windows/Rtools/
-
----
-
-## Différences avec EsPaCe
-
-| Aspect | EsPaCe | SaMARE |
-|--------|--------|--------|
-| Packages GitHub | EsPaCe, Natura2014, Artemis2014 | SimulateurSaMARE, Billonage, ExtractMap, OutilsDRF, TarifQC |
-| Thème couleur | Bleu (MRNF) | Vert |
-| Mode simulation | Déterministe + Stochastique | Itérations multiples |
-
----
-
-## Contact
-
-Pour questions techniques sur ce système de déploiement :
-- emmanuel.duchateau@mrnf.gouv.qc.ca
-
-Pour questions sur SaMARE :
-- recherche.forestiere@mrnf.gouv.qc.ca
-
----
-
-*Documentation créée en décembre 2025*
