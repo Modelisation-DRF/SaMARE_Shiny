@@ -497,8 +497,7 @@ server <- function(input, output, session) {
                                 "Sommaire dendrométrique par itération" = "dendro_par_iteration", 
                                 "Sommaire dendrométrique par placette" = "dendro_par_placette", 
                                 "À l'échelle du billon" = "echelle_billon", 
-                                "Sommaire classes DHP" = "Sommaire_Classes_DHP", 
-                                "test" = "test"),
+                                "Sommaire classes DHP" = "Sommaire_Classes_DHP"),
                     selected = "arbre_par_iteration"
         ),
         tags$br(),

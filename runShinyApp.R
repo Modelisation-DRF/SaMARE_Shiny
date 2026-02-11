@@ -3,9 +3,24 @@
 # Ce script vérifie les packages et lance l'application appropriée
 # ============================================================================
 
-cat("========================================\n")
-cat("       Démarrage SaMARE\n")
-cat("========================================\n\n")
+# Créer le fichier log unique (nom fixe, sera écrasé à chaque lancement)
+log_file <- "samare_log.txt"
+log_con <- file(log_file, open = "wt")
+
+# Fonction de logging qui écrit dans le fichier ET affiche à la console
+log_cat <- function(...) {
+  msg <- paste0(...)
+  cat(msg, file = log_con)
+  cat(msg)  # Afficher aussi à la console
+  flush(log_con)
+}
+
+# Sauvegarder le chemin du log dans l'environnement pour app.R
+Sys.setenv(SAMARE_LOG_FILE = log_file)
+
+log_cat("========================================\n")
+log_cat("       Démarrage SaMARE\n")
+log_cat("========================================\n\n")
 
 # Configuration du miroir CRAN
 options(repos = c(CRAN = "https://cloud.r-project.org"))
@@ -14,7 +29,7 @@ options(repos = c(CRAN = "https://cloud.r-project.org"))
 # ÉTAPE 0 : Configuration des chemins de bibliothèques
 # ============================================================================
 
-cat("Configuration des chemins R...\n")
+log_cat("Configuration des chemins R...\n")
 
 # Lire le fichier .Renviron pour trouver R_LIBS_USER
 renviron_path <- file.path(Sys.getenv("HOME"), ".Renviron")
@@ -26,18 +41,18 @@ if (file.exists(renviron_path)) {
       lib_path <- Sys.getenv("R_LIBS_USER", unset = lib_path)
       if (nzchar(lib_path) && dir.exists(lib_path)) {
         .libPaths(c(lib_path, .libPaths()))
-        cat("  Bibliothèque utilisateur ajoutée:", lib_path, "\n")
+        log_cat("  Bibliothèque utilisateur ajoutée:", lib_path, "\n")
       }
     }
   }
 }
 
 # Afficher les chemins actuels
-cat("  Chemins de bibliothèques R:\n")
+log_cat("  Chemins de bibliothèques R:\n")
 for (p in .libPaths()) {
-  cat("    -", p, "\n")
+  log_cat("    -", p, "\n")
 }
-cat("\n")
+log_cat("\n")
 
 # ============================================================================
 # ÉTAPE 1 : Vérifier/Installer les packages de BASE pour l'app diagnostic
@@ -47,22 +62,22 @@ cat("\n")
 # rlang est une dépendance critique de shiny - sans lui, shiny ne peut pas se charger
 packages_base <- c("rlang", "shiny", "shinyjs")
 
-cat("Vérification des packages de base...\n")
+log_cat("Vérification des packages de base...\n")
 
 install_base_package <- function(pkg) {
   if (!nzchar(system.file(package = pkg))) {
-    cat("  Installation de", pkg, "(requis pour le diagnostic)...\n")
+    log_cat("  Installation de", pkg, "(requis pour le diagnostic)...\n")
     tryCatch({
       install.packages(pkg, quiet = TRUE, dependencies = TRUE)
       if (nzchar(system.file(package = pkg))) {
-        cat("    ✓", pkg, "installé avec succès\n")
+        log_cat("    ✓", pkg, "installé avec succès\n")
         return(TRUE)
       } else {
-        cat("    ✗ Échec de l'installation de", pkg, "\n")
+        log_cat("    ✗ Échec de l'installation de", pkg, "\n")
         return(FALSE)
       }
     }, error = function(e) {
-      cat("    ✗ Erreur:", conditionMessage(e), "\n")
+      log_cat("    ✗ Erreur:", conditionMessage(e), "\n")
       return(FALSE)
     })
   } else {
@@ -78,20 +93,21 @@ for (pkg in packages_base) {
 }
 
 if (!base_ok) {
-  cat("\n")
-  cat("╔══════════════════════════════════════════════════════════════╗\n")
-  cat("║  ERREUR CRITIQUE : Impossible d'installer les packages de   ║\n")
-  cat("║  base (rlang, shiny, shinyjs).                              ║\n")
-  cat("║                                                              ║\n")
-  cat("║  Veuillez ouvrir R ou RStudio et exécuter :                 ║\n")
-  cat("║  install.packages(c('rlang', 'shiny', 'shinyjs'))           ║\n")
-  cat("╚══════════════════════════════════════════════════════════════╝\n")
-  cat("\nAppuyez sur Entrée pour fermer...")
+  log_cat("\n")
+  log_cat("╔══════════════════════════════════════════════════════════════╗\n")
+  log_cat("║  ERREUR CRITIQUE : Impossible d'installer les packages de   ║\n")
+  log_cat("║  base (rlang, shiny, shinyjs).                              ║\n")
+  log_cat("║                                                              ║\n")
+  log_cat("║  Veuillez ouvrir R ou RStudio et exécuter :                 ║\n")
+  log_cat("║  install.packages(c('rlang', 'shiny', 'shinyjs'))           ║\n")
+  log_cat("╚══════════════════════════════════════════════════════════════╝\n")
+  log_cat("\nAppuyez sur Entrée pour fermer...")
   invisible(readline())
+  close(log_con)
   q(save = "no")
 }
 
-cat("  ✓ Packages de base OK\n\n")
+log_cat("  ✓ Packages de base OK\n\n")
 
 # ============================================================================
 # ÉTAPE 2 : Définir les packages requis par l'application SaMARE
@@ -130,7 +146,7 @@ check_package_installed <- function(pkg) {
 # ÉTAPE 4 : Vérification de tous les packages requis
 # ============================================================================
 
-cat("Vérification des packages de l'application...\n")
+log_cat("Vérification des packages de l'application...\n")
 
 packages_manquants_cran <- character(0)
 packages_manquants_github <- character(0)
@@ -139,9 +155,9 @@ packages_manquants_github <- character(0)
 for (pkg in packages_cran) {
   if (!check_package_installed(pkg)) {
     packages_manquants_cran <- c(packages_manquants_cran, pkg)
-    cat("  ✗", pkg, "(CRAN) - MANQUANT\n")
+    log_cat("  ✗", pkg, "(CRAN) - MANQUANT\n")
   } else {
-    cat("  ✓", pkg, "\n")
+    log_cat("  ✓", pkg, "\n")
   }
 }
 
@@ -149,15 +165,15 @@ for (pkg in packages_cran) {
 for (pkg in packages_github) {
   if (!check_package_installed(pkg)) {
     packages_manquants_github <- c(packages_manquants_github, pkg)
-    cat("  ✗", pkg, "(GitHub) - MANQUANT\n")
+    log_cat("  ✗", pkg, "(GitHub) - MANQUANT\n")
   } else {
-    cat("  ✓", pkg, "\n")
+    log_cat("  ✓", pkg, "\n")
   }
 }
 
 packages_manquants <- c(packages_manquants_cran, packages_manquants_github)
 
-cat("\n")
+log_cat("\n")
 
 # ============================================================================
 # ÉTAPE 5 : Décision - Lancer app principale ou app diagnostic
@@ -174,11 +190,11 @@ if (length(packages_manquants) > 0) {
   # Des packages sont manquants -> Lancer app_diagnostic.R
   # ========================================
   
-  cat("╔══════════════════════════════════════════════════════════════╗\n")
-  cat("║  PACKAGES MANQUANTS DÉTECTÉS                                 ║\n")
-  cat("╚══════════════════════════════════════════════════════════════╝\n\n")
+  log_cat("╔══════════════════════════════════════════════════════════════╗\n")
+  log_cat("║  PACKAGES MANQUANTS DÉTECTÉS                                 ║\n")
+  log_cat("╚══════════════════════════════════════════════════════════════╝\n\n")
   
-  cat("Packages manquants:", paste(packages_manquants, collapse = ", "), "\n\n")
+  log_cat("Packages manquants:", paste(packages_manquants, collapse = ", "), "\n\n")
   
   # Sauvegarder l'état pour app_diagnostic.R
   status_file <- file.path(app_dir, "package_status.rds")
@@ -196,8 +212,8 @@ if (length(packages_manquants) > 0) {
   diagnostic_app <- file.path(app_dir, "app_diagnostic.R")
   
   if (file.exists(diagnostic_app)) {
-    cat("Démarrage de l'application de diagnostic...\n")
-    cat("(Interface pour installer les packages manquants)\n\n")
+    log_cat("Démarrage de l'application de diagnostic...\n")
+    log_cat("(Interface pour installer les packages manquants)\n\n")
     
     tryCatch({
       # Se déplacer dans le dossier app pour que l'app trouve package_status.rds
@@ -206,53 +222,55 @@ if (length(packages_manquants) > 0) {
       source("app_diagnostic.R")
       setwd(old_wd)
     }, error = function(e) {
-      cat("\n")
-      cat("╔══════════════════════════════════════════════════════════════╗\n")
-      cat("║  ERREUR lors du lancement de l'app diagnostic               ║\n")
-      cat("╚══════════════════════════════════════════════════════════════╝\n")
-      cat("Erreur:", conditionMessage(e), "\n\n")
-      cat("Installation manuelle requise. Ouvrez R/RStudio et exécutez:\n\n")
+      log_cat("\n")
+      log_cat("╔══════════════════════════════════════════════════════════════╗\n")
+      log_cat("║  ERREUR lors du lancement de l'app diagnostic               ║\n")
+      log_cat("╚══════════════════════════════════════════════════════════════╝\n")
+      log_cat("Erreur:", conditionMessage(e), "\n\n")
+      log_cat("Installation manuelle requise. Ouvrez R/RStudio et exécutez:\n\n")
       
       if (length(packages_manquants_cran) > 0) {
-        cat("# Packages CRAN:\n")
-        cat(paste0('install.packages(c("', paste(packages_manquants_cran, collapse = '", "'), '"))\n\n'))
+        log_cat("# Packages CRAN:\n")
+        log_cat(paste0('install.packages(c("', paste(packages_manquants_cran, collapse = '", "'), '"))\n\n'))
       }
       
       if (length(packages_manquants_github) > 0) {
-        cat("# Packages GitHub:\n")
-        cat('install.packages("remotes")\n')
+        log_cat("# Packages GitHub:\n")
+        log_cat('install.packages("remotes")\n')
         for (pkg in packages_manquants_github) {
-          cat(paste0('remotes::install_github("Modelisation-DRF/', pkg, '")\n'))
+          log_cat(paste0('remotes::install_github("Modelisation-DRF/', pkg, '")\n'))
         }
       }
       
-      cat("\nAppuyez sur Entrée pour fermer...")
+      log_cat("\nAppuyez sur Entrée pour fermer...")
       invisible(readline())
-      q(save = "no")
+      close(log_con)
+  q(save = "no")
     })
   } else {
     # Pas d'app diagnostic disponible
-    cat("╔══════════════════════════════════════════════════════════════╗\n")
-    cat("║  app_diagnostic.R introuvable                               ║\n")
-    cat("╚══════════════════════════════════════════════════════════════╝\n\n")
-    cat("Installation manuelle requise. Ouvrez R/RStudio et exécutez:\n\n")
+    log_cat("╔══════════════════════════════════════════════════════════════╗\n")
+    log_cat("║  app_diagnostic.R introuvable                               ║\n")
+    log_cat("╚══════════════════════════════════════════════════════════════╝\n\n")
+    log_cat("Installation manuelle requise. Ouvrez R/RStudio et exécutez:\n\n")
     
     if (length(packages_manquants_cran) > 0) {
-      cat("# Packages CRAN:\n")
-      cat(paste0('install.packages(c("', paste(packages_manquants_cran, collapse = '", "'), '"))\n\n'))
+      log_cat("# Packages CRAN:\n")
+      log_cat(paste0('install.packages(c("', paste(packages_manquants_cran, collapse = '", "'), '"))\n\n'))
     }
     
     if (length(packages_manquants_github) > 0) {
-      cat("# Packages GitHub:\n")
-      cat('install.packages("remotes")\n')
+      log_cat("# Packages GitHub:\n")
+      log_cat('install.packages("remotes")\n')
       for (pkg in packages_manquants_github) {
-        cat(paste0('remotes::install_github("Modelisation-DRF/', pkg, '")\n'))
+        log_cat(paste0('remotes::install_github("Modelisation-DRF/', pkg, '")\n'))
       }
     }
     
-    cat("\nAppuyez sur Entrée pour fermer...")
+    log_cat("\nAppuyez sur Entrée pour fermer...")
     invisible(readline())
-    q(save = "no")
+    close(log_con)
+  q(save = "no")
   }
   
 } else {
@@ -260,34 +278,37 @@ if (length(packages_manquants) > 0) {
   # Tous les packages sont présents -> Lancer app.R
   # ========================================
   
-  cat("╔══════════════════════════════════════════════════════════════╗\n")
-  cat("║  ✓ Tous les packages sont installés                         ║\n")
-  cat("╚══════════════════════════════════════════════════════════════╝\n\n")
+  log_cat("╔══════════════════════════════════════════════════════════════╗\n")
+  log_cat("║  ✓ Tous les packages sont installés                         ║\n")
+  log_cat("╚══════════════════════════════════════════════════════════════╝\n\n")
   
   main_app <- file.path(app_dir, "app.R")
   
   if (file.exists(main_app)) {
-    cat("Démarrage de l'application SaMARE...\n")
-    cat("L'application va s'ouvrir dans votre navigateur.\n\n")
+    log_cat("Démarrage de l'application SaMARE...\n")
+    log_cat("L'application va s'ouvrir dans votre navigateur.\n")
+    log_cat(paste0("Le log continuera dans app.R (", log_file, ")\n\n"))
     
     tryCatch({
       # Utiliser runApp avec le chemin du dossier pour que Shiny trouve le dossier www
       shiny::runApp(app_dir, launch.browser = TRUE)
     }, error = function(e) {
-      cat("\n")
-      cat("╔══════════════════════════════════════════════════════════════╗\n")
-      cat("║  ERREUR lors du lancement de l'application                  ║\n")
-      cat("╚══════════════════════════════════════════════════════════════╝\n")
-      cat("Erreur:", conditionMessage(e), "\n")
-      cat("\nAppuyez sur Entrée pour fermer...")
+      log_cat("\n")
+      log_cat("╔══════════════════════════════════════════════════════════════╗\n")
+      log_cat("║  ERREUR lors du lancement de l'application                  ║\n")
+      log_cat("╚══════════════════════════════════════════════════════════════╝\n")
+      log_cat("Erreur:", conditionMessage(e), "\n")
+      log_cat("\nAppuyez sur Entrée pour fermer...")
       invisible(readline())
-      q(save = "no")
+      close(log_con)
+  q(save = "no")
     })
   } else {
-    cat("ERREUR: app.R introuvable dans", app_dir, "\n")
-    cat("Vérifiez que le fichier app.R existe dans le dossier 'app'.\n")
-    cat("\nAppuyez sur Entrée pour fermer...")
+    log_cat("ERREUR: app.R introuvable dans", app_dir, "\n")
+    log_cat("Vérifiez que le fichier app.R existe dans le dossier 'app'.\n")
+    log_cat("\nAppuyez sur Entrée pour fermer...")
     invisible(readline())
-    q(save = "no")
+    close(log_con)
+  q(save = "no")
   }
 }
