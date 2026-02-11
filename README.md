@@ -60,10 +60,9 @@ install.packages(c(
 ```r
 install.packages("remotes")
 remotes::install_github("Modelisation-DRF/SimulateurSaMARE")
-remotes::install_github("Modelisation-DRF/Billonage")
+remotes::install_github("Modelisation-DRF/BillonnagePetro")
 remotes::install_github("Modelisation-DRF/ExtractMap")
 remotes::install_github("Modelisation-DRF/OutilsDRF")
-remotes::install_github("Modelisation-DRF/TarifQC")
 ```
 
 **Note :** Pour les packages GitHub sous Windows, [Rtools](https://cran.r-project.org/bin/windows/Rtools/) est requis.
