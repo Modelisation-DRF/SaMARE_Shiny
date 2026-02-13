@@ -16,21 +16,27 @@ Ce système permet de lancer l'application Shiny SaMARE en double-cliquant sur u
 ```
 SaMARE_Application/
 │
-├── Lancer_SaMARE.vbs          ← Double-cliquer pour lancer
-├── _launcher.bat              ← Script batch (appelé par VBS)
-├── runShinyApp.R              ← Script de démarrage R
+├── Lancer_SaMARE.vbs              ← Double-cliquer pour lancer
+├── _launcher.bat                  ← Script batch (appelé par VBS)
+├── runShinyApp.R                  ← Script de démarrage R
 │
-├── app/                       ← Dossier de l'application Shiny
-│   ├── app.R                  ← Application principale 
-│   ├── app_diagnostic.R       ← Application de diagnostic/installation
-│   └── www/                   ← Ressources web 
+├── app/                           ← Dossier de l'application Shiny
+│   ├── app.R                      ← Application principale
+│   ├── app_diagnostic.R           ← Application de diagnostic / installation
+│   ├── package_status.rds         ← État des packages requis
+│   │
+│   ├── data/                      ← Fichiers d'exemples
+│   │   ├── GaulesTest2500m2.csv
+│   │   ├── Test2500m2.csv
+│   │   ├── Test400m2_TEM_CP.csv
+│   │   └── Test2500m2_sans_climat.csv
+│   │
+│   └── www/                       ← Ressources web (UI)
 │       ├── SaMARE_MRNF_Final.jpg
 │       ├── Aide2.webp
-│       ├── Aide application R du simulateur SaMARE.pdf
-│       ├── Test2500m2.csv
-│       └── GaulesTest2500m2.csv
+│       └── Aide application R du simulateur SaMARE.pdf
 │
-└── README.md                  ← Ce fichier
+└── README.md                      ← Documentation principale
 ```
 
 ---

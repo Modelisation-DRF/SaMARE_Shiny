@@ -29,13 +29,13 @@ is_interactive_session <- interactive() && is_rstudio
 #Code_UI___________________________________________________________________####
 ui <- fluidPage(
   useShinyjs(),
-  
+
   tags$head(
     # JavaScript pour gérer la fermeture de fenêtre et protection simulation
     tags$script(HTML("
       // Variable pour tracker si une simulation est en cours
       var simulationEnCours = false;
-      
+
       // Handler pour fermer la fenêtre
       Shiny.addCustomMessageHandler('closeWindow', function(message) {
         window.close();
@@ -43,12 +43,12 @@ ui <- fluidPage(
           alert('Vous pouvez maintenant fermer cette fenêtre.');
         }, 500);
       });
-      
+
       // Handler pour marquer le début/fin de simulation
       Shiny.addCustomMessageHandler('setSimulationStatus', function(status) {
         simulationEnCours = status;
       });
-      
+
       // Avertir l'utilisateur s'il ferme pendant une simulation
       window.onbeforeunload = function(e) {
         if (simulationEnCours) {
@@ -59,7 +59,7 @@ ui <- fluidPage(
       };
     "))
   ),
-  
+
   # CSS personnalisé SaMARE (couleurs vertes originales)
   tags$style(HTML("
     .btn {
@@ -68,7 +68,7 @@ ui <- fluidPage(
       color: white;
     }
     .well {
-        background-color: #d8f3dc; 
+        background-color: #d8f3dc;
     }
     .btn:hover {
       background-color: darkgreen;
@@ -116,7 +116,7 @@ ui <- fluidPage(
       color: #000;
     }
   ")),
-  
+
   navbarPage(
     "",
     id = "all_pages",
@@ -169,7 +169,7 @@ ui <- fluidPage(
             }
           ")),
           fluidRow(
-            column(width = 12, 
+            column(width = 12,
                    div(class = "box",
                        h2("À Propos de SaMARE"),
                        p("Le simulateur de croissance SaMARE est un modèle de croissance à l'échelle de l'arbre. Il est adapté pour les peuplements feuillus et mixtes de la forêt tempérée du Québec. Il prévoit l'accroissement en diamètre, la probabilité de mortalité et l'évolution de la vigueur des arbres de plus de 9,0 cm de diamètre ainsi que le recrutement de nouveaux arbres au seuil de 9,1 cm."),
@@ -198,23 +198,23 @@ ui <- fluidPage(
 
 #Code_Server_______________________________________________________________####
 server <- function(input, output, session) {
-  
+
   # Fermeture propre de la session (quand l'utilisateur ferme l'onglet)
   session$onSessionEnded(function() {
     # Nettoyage mémoire
     gc()
     message("Session fermée.")
-    
+
     # Quitter R seulement si on n'est PAS dans RStudio (lancé via VBS)
     if (!is_interactive_session) {
       Sys.sleep(0.5)
       q(save = "no")
     }
   })
-  
+
   output$dynamic_sidebar <- renderUI({
     sidebarPanel(
-      fileInput( 
+      fileInput(
         inputId = "file",
         label = "Données d'inventaire de départ (format csv)",
         multiple = FALSE,
@@ -223,7 +223,7 @@ server <- function(input, output, session) {
         buttonLabel = "Parcourir",
         placeholder = "Aucun fichier sélectionné",
         capture = NULL),
-      
+
       htmlOutput("statut"),
       htmlOutput("error"),
       htmlOutput("statut_data"),
@@ -235,7 +235,7 @@ server <- function(input, output, session) {
                    inline = TRUE),
       conditionalPanel(
         condition = "input.RecruesGaules == 1",
-        fileInput( 
+        fileInput(
           inputId = "gauleFile",
           label = "Dénombrement des gaules (format csv)",
           multiple = FALSE,
@@ -251,31 +251,31 @@ server <- function(input, output, session) {
         htmlOutput("statut_data_gaules_plac"),
         htmlOutput("error_data_gaules_plac")
       ),
-      
+
       numericInput("NbIter", "Nombre d'itérations (nombre pair)", min = 2, value = NA, step = 2),
       radioButtons("corticale", "Maladie corticale du hêtre",
                    choices = list("Oui" = 1, "Non" = 0),
                    selected = 0,
                    inline = TRUE),
-      
+
       uiOutput("conditionalButton")
     )
   })
-  
+
   # Lire le fichier arbres
   data <- reactive({
     req(input$file)
     read.delim(input$file$datapath, sep = ";")
   })
-  
+
   # Lire le fichier des gaules
   gaule_data <- reactive({
     req(input$gauleFile)
     read.delim(input$gauleFile$datapath, sep = ";")
   })
-  
+
   simulation_status <- reactiveVal("Attente de la simulation...")
-  
+
   # Variables réactives
   processed_Simul <- reactiveVal(NULL)
   processed_data_ArbreSamare <- reactiveVal(NULL)
@@ -296,7 +296,7 @@ server <- function(input, output, session) {
   show_grade2 <- reactiveVal(TRUE)
   show_grade3 <- reactiveVal(FALSE)
   donnees_graphique <- reactiveVal(NULL)
-  
+
   # Fonction pour afficher les erreurs
   afficher_erreurs <- function(erreurs, statut_output, erreur_output, emplacement) {
     if (length(erreurs) != 0) {
@@ -312,17 +312,17 @@ server <- function(input, output, session) {
       output[[erreur_output]] <- renderText({ HTML("") })
     }
   }
-  
+
   observeEvent(input$file, {
     output$dynamic_mainpanel <- renderUI({ tableOutput("table") })
     isFile$flag <- TRUE
     validate_files()
   })
-  
+
   observeEvent(input$gauleFile, {
     validate_files()
   })
-  
+
   validate_files <- function() {
     if (is.null(input$file)) {
       afficher_erreurs("Le fichier data est manquant.", "statut_data_gaules", "error_data_gaules", "")
@@ -330,26 +330,26 @@ server <- function(input, output, session) {
     }
     processed_absent(trouver_noms_absents(data()))
     valider_data(valide_data(data()))
-    
+
     afficher_erreurs(processed_absent(), "statut_data", "error_data", "dans le fichier des arbres")
     afficher_erreurs(valider_data(), "statut", "error", "dans le fichier des arbres")
-    
+
     if (input$RecruesGaules == 1 && !is.null(input$gauleFile)) {
       processed_absent_gaules(trouver_noms_absents_gaules(gaule_data()))
       valider_data_gaules(valide_data_gaules(gaule_data()))
       valider_placette_gaules(valide_placette_gaules(data_arbre = data(), data_gaules = gaule_data()))
-      
+
       afficher_erreurs(processed_absent_gaules(), "statut_data_gaules", "error_data_gaules", "dans le fichier des gaules")
       afficher_erreurs(valider_data_gaules(), "statut_data_gaules_vall", "error_data_gaules_vall", "dans le fichier des gaules")
       afficher_erreurs(valider_placette_gaules(), "statut_data_gaules_plac", "error_data_gaules_plac", "dans le fichier des gaules")
     }
   }
-  
+
   observe({
     input$RecruesGaules
     input$Horizon
     input$NbIter
-    
+
     output$conditionalButton <- renderUI({
       if (!is.null(input$file) && !is.na(input$Horizon) && input$Horizon >= 5 && !is.na(input$NbIter) && input$NbIter > 1 && input$NbIter %% 2 == 0 && input$RecruesGaules == 0 && length(processed_absent()) == 0 && length(valider_data()) == 0 && isFile$flag && input$Horizon %% 5 == 0) {
         actionButton("simulateButton", "Simulation")
@@ -358,42 +358,42 @@ server <- function(input, output, session) {
       }
     })
   })
-  
+
   observeEvent(input$simulateButton, {
     isFile$flag <- FALSE
-    
+
     # Protection: Activer l'avertissement de fermeture
     session$sendCustomMessage("setSimulationStatus", TRUE)
-    
+
     simulation_status("Simulation en cours...")
-    
+
     vevifier_meteo(vevifier_variable_meteo(data()))
     output$dynamic_sidebar <- renderUI({
       sidebarPanel(
         h3("Simulation en cours...")
       )
     })
-    
+
     withProgress(message = 'Simulation en cours...', value = 0, {
       tryCatch({
         if (input$RecruesGaules == 1) {
           result <- SimulSaMARE(NbIter = input$NbIter, Horizon = (input$Horizon / 5),
-                                RecruesGaules = input$RecruesGaules, Data = vevifier_meteo(), 
+                                RecruesGaules = input$RecruesGaules, Data = vevifier_meteo(),
                                 Gaules = gaule_data(), MCH = input$corticale)
         } else {
           result <- SimulSaMARE(NbIter = input$NbIter, Horizon = (input$Horizon / 5),
-                                RecruesGaules = input$RecruesGaules, Data = vevifier_meteo(), 
+                                RecruesGaules = input$RecruesGaules, Data = vevifier_meteo(),
                                 MCH = input$corticale)
         }
-        
+
         placette(unique(result$Placette))
         Sys.sleep(5)
         simulation_status("Simulation terminée. Vous pouvez maintenant télécharger le résultat.")
-        
+
         donnees_graphique(result)
         processed_data_htvol(result)
         processed_Simul(result)
-        
+
       }, error = function(e) {
         showNotification(paste("Erreur de simulation:", e$message), type = "error", duration = 10)
         simulation_status("Erreur lors de la simulation.")
@@ -402,12 +402,12 @@ server <- function(input, output, session) {
         session$sendCustomMessage("setSimulationStatus", FALSE)
       })
     })
-    
+
     # Observateurs pour les grades (billonnage)
     observeEvent(input$add_grade2, {
       show_grade2(TRUE)
     })
-    
+
     observeEvent(input$remove_grade2, {
       show_grade2(FALSE)
       show_grade3(FALSE)
@@ -418,20 +418,20 @@ server <- function(input, output, session) {
       updateSelectInput(session, "long_grade3", selected = "")
       updateNumericInput(session, "diam_grade3", value = NA)
     })
-    
+
     observeEvent(input$add_grade3, {
       if (show_grade2()) {
         show_grade3(TRUE)
       }
     })
-    
+
     observeEvent(input$remove_grade3, {
       show_grade3(FALSE)
       updateTextInput(session, "nom_grade3", value = "")
       updateSelectInput(session, "long_grade3", selected = "")
       updateNumericInput(session, "diam_grade3", value = NA)
     })
-    
+
     # Interface post-simulation
     output$dynamic_sidebar <- renderUI({
       tags$head(
@@ -445,15 +445,15 @@ server <- function(input, output, session) {
       sidebarPanel(
         textOutput("simulationStatus"),
         tags$br(),
-        
+
         switchInput(
           inputId = "affichegraph",
-          label = "Afficher le graphique",         
+          label = "Afficher le graphique",
           onLabel = "oui",
           offLabel = "non",
           value = FALSE
         ),
-        
+
         conditionalPanel(
           condition = "input.affichegraph == true",
           radioButtons("graphType", "Type de graphiques à créer:",
@@ -463,13 +463,13 @@ server <- function(input, output, session) {
           selectInput("Espece", "Groupe d'espèces", choices = c("")),
           conditionalPanel(
             condition = "input.graphType == 'Évolution des variables par placette'",
-            selectInput("variable", "Choix de la variable", 
+            selectInput("variable", "Choix de la variable",
                         choices = c("ST_HA", "Vol_HA", "DQM", "HDomM", "nbTi_HA"))
           ),
           pickerInput(
-            inputId = "placette", 
-            label = "Choix des placettes", 
-            choices = placette(), 
+            inputId = "placette",
+            label = "Choix des placettes",
+            choices = placette(),
             selected = placette(),
             multiple = TRUE,
             options = list(
@@ -493,25 +493,25 @@ server <- function(input, output, session) {
         tags$br(),
         selectInput("Sortie",
                     label = "Choix de la sortie",
-                    choices = c("Arbre par itération" = "arbre_par_iteration", 
-                                "Sommaire dendrométrique par itération" = "dendro_par_iteration", 
-                                "Sommaire dendrométrique par placette" = "dendro_par_placette", 
-                                "À l'échelle du billon" = "echelle_billon", 
+                    choices = c("Arbre par itération" = "arbre_par_iteration",
+                                "Sommaire dendrométrique par itération" = "dendro_par_iteration",
+                                "Sommaire dendrométrique par placette" = "dendro_par_placette",
+                                "À l'échelle du billon" = "echelle_billon",
                                 "Sommaire classes DHP" = "Sommaire_Classes_DHP"),
                     selected = "arbre_par_iteration"
         ),
         tags$br(),
-        
+
         conditionalPanel(
-          condition = "input.Sortie == 'echelle_billon'", 
+          condition = "input.Sortie == 'echelle_billon'",
           selectInput("typeBillonnage", "Type de Billonnage :",
-                      choices = list("DHP_Régionalisé" = "DHP", "ABCD_Régionalisé" = "ABCD", 
+                      choices = list("DHP_Régionalisé" = "DHP", "ABCD_Régionalisé" = "ABCD",
                                      "1234_Provincial" = "1234", "MSCR_Provincial" = "MSCR",
                                      "DHP_Provincial" = "DHP2015", "ABCD_Provincial" = "ABCD2015"),
                       selected = "DHP"
           )
         ),
-        
+
         # Section billonnage
         conditionalPanel(
           condition = "input.Sortie == 'echelle_billon'",
@@ -538,15 +538,15 @@ server <- function(input, output, session) {
                          icon = icon("calculator"))
           )
         ),
-        
-        downloadButton("download", "Télécharger le résultat", 
+
+        downloadButton("download", "Télécharger le résultat",
                        style = "background-color: #008000; color: white; border-color: #3c8dbc;"),
         tags$br(),
         tags$br(),
         actionButton("reset_button", "Réinitialiser")
       )
     })
-    
+
     # Render UI pour les grades
     output$add_grade2_button <- renderUI({
       if (!show_grade2()) {
@@ -558,7 +558,7 @@ server <- function(input, output, session) {
         )
       }
     })
-    
+
     output$grade2_section <- renderUI({
       if (show_grade2()) {
         div(
@@ -579,7 +579,7 @@ server <- function(input, output, session) {
         )
       }
     })
-    
+
     output$add_grade3_button <- renderUI({
       if (show_grade2() && !show_grade3()) {
         div(
@@ -590,7 +590,7 @@ server <- function(input, output, session) {
         )
       }
     })
-    
+
     output$grade3_section <- renderUI({
       if (show_grade3()) {
         div(
@@ -611,7 +611,7 @@ server <- function(input, output, session) {
         )
       }
     })
-    
+
     output$dynamic_mainpanel <- renderUI({
       if (!is.null(input$affichegraph) && input$affichegraph == TRUE) {
         tabsetPanel(type = "tabs",
@@ -621,10 +621,10 @@ server <- function(input, output, session) {
         div("")
       }
     })
-    
+
     simulation_status("Simulation terminée. Vous pouvez maintenant télécharger le résultat.")
   })
-  
+
   # FERMETURE de l'application
   observeEvent(input$close, {
     showNotification(
@@ -632,28 +632,28 @@ server <- function(input, output, session) {
       type = "message",
       duration = 2
     )
-    
+
     # JavaScript pour fermer la fenêtre/onglet du navigateur
     session$sendCustomMessage(
       type = "closeWindow",
       message = "closing"
     )
-    
+
     # Nettoyage mémoire
     gc()
-    
+
     # Attendre un peu
     Sys.sleep(0.5)
-    
+
     # Arrêter le serveur Shiny
     stopApp()
-    
+
     # Quitter R seulement si on n'est PAS dans RStudio (lancé via VBS)
     if (!is_interactive_session) {
       q(save = "no")
     }
   })
-  
+
   # Réinitialisation
   observeEvent(input$reset_button, {
     showModal(modalDialog(
@@ -665,7 +665,7 @@ server <- function(input, output, session) {
       )
     ))
   })
-  
+
   observeEvent(input$confirm_reset, {
     processed_Simul(NULL)
     processed_data_ArbreSamare(NULL)
@@ -682,19 +682,19 @@ server <- function(input, output, session) {
     vevifier_meteo(NULL)
     donnees_graphique(NULL)
     removeModal()
-    
+
     updateNumericInput(session, "Horizon", value = NA)
     updateRadioButtons(session, "RecruesGaules", selected = 0)
     updateNumericInput(session, "NbIter", value = NA)
     updateRadioButtons(session, "corticale", selected = 0)
     updateSelectInput(session, "variable", selected = NULL)
     updatePickerInput(session, "placette", selected = NULL)
-    
+
     output$dynamic_mainpanel <- renderUI({ NULL })
-    
+
     output$dynamic_sidebar <- renderUI({
       sidebarPanel(
-        fileInput( 
+        fileInput(
           inputId = "file",
           label = "Données d'inventaire de départ (format csv)",
           multiple = FALSE,
@@ -703,7 +703,7 @@ server <- function(input, output, session) {
           buttonLabel = "Parcourir",
           placeholder = "Aucun fichier sélectionné",
           capture = NULL),
-        
+
         htmlOutput("statut"),
         htmlOutput("error"),
         htmlOutput("statut_data"),
@@ -715,7 +715,7 @@ server <- function(input, output, session) {
                      inline = TRUE),
         conditionalPanel(
           condition = "input.RecruesGaules == 1",
-          fileInput( 
+          fileInput(
             inputId = "gauleFile",
             label = "Dénombrement des gaules (format csv)",
             multiple = FALSE,
@@ -740,7 +740,7 @@ server <- function(input, output, session) {
       )
     })
   })
-  
+
   # Fonctions de graphique
   mettre_a_jour_graphique <- function() {
     if (input$affichegraph == T) {
@@ -760,26 +760,26 @@ server <- function(input, output, session) {
         showNotification("Sélectionnez au moins une placette", type = "warning", duration = 3)
         return()
       }
-      
+
       tryCatch({
         result <- Graph(SimulHtVol = donnees_graphique(),
-                        Espece = input$Espece, 
-                        Variable = input$variable, 
+                        Espece = input$Espece,
+                        Variable = input$variable,
                         listePlacette = input$placette)
         graph(result)
       }, error = function(e) {
         cat("ERREUR graphique:", e$message, "\n")
-        showNotification(paste("Erreur lors de la génération du graphique:", substr(e$message, 1, 80)), 
+        showNotification(paste("Erreur lors de la génération du graphique:", substr(e$message, 1, 80)),
                          type = "error", duration = 5)
       })
     }
   }
-  
+
   observeEvent(input$affichegraph, { mettre_a_jour_graphique() })
   observeEvent(input$Espece, { mettre_a_jour_graphique() })
   observeEvent(input$variable, { mettre_a_jour_graphique() })
   observeEvent(input$valider, { mettre_a_jour_graphique() })
-  
+
   output$plot <- renderPlot({
     graphiques <- graph()
     if (input$graphType == "Évolution des variables par placette") {
@@ -789,26 +789,26 @@ server <- function(input, output, session) {
     }
     print(graph_to_print())
   })
-  
+
   observe({
     listeEspece <- unique(processed_data_htvol()$GrEspece)
     listeEspece2 <- append("TOT", listeEspece)
     updateSelectInput(session = session, inputId = "Espece",
                       label = "Groupe d'espèces", choices = listeEspece2)
   })
-  
+
   # Gestion des sorties
   observe({
     req(input$Sortie)
     sortie <- input$Sortie
     simplifier <- input$simplifier
-    
+
     if (is.null(sortie) || sortie == "") {
       return()
     } else if (is.null(processed_data_htvol())) {
       return()
     }
-    
+
     switch(sortie,
            "arbre_par_iteration" = {
              processed_Simul(SortieArbreSamare(SimulHtVol = processed_data_htvol(), simplifier = simplifier))
@@ -830,38 +830,38 @@ server <- function(input, output, session) {
            }
     )
   })
-  
+
   observeEvent(input$Sortie, {
     if (input$Sortie == "echelle_billon" && !is.null(input$Sortie)) {
       req(input$typeBillonnage)
       processed_Billonage(SortieBillonnage(Data = processed_data_htvol(), Type = input$typeBillonnage))
     }
   })
-  
+
   # Observateur pour le calcul du billonnage
   observeEvent(input$calculer_billonnage, {
     req(input$dhs_input, input$typeBillonnage, processed_data_htvol())
-    
+
     if (is.null(input$nom_grade1) || input$nom_grade1 == "") {
       showNotification("Le nom du Grade 1 est obligatoire", type = "error", duration = 5)
       return()
     }
-    
+
     withProgress(message = 'Calcul du billonnage en cours...', value = 0, {
       incProgress(0.1, detail = "Validation des paramètres...")
-      
+
       dhs_val <- as.numeric(input$dhs_input)
       simplifier_val <- input$simplifier
-      
+
       suppressWarnings({
         incProgress(0.2, detail = "Traitement des longueurs...")
-        
+
         long_grade1_val <- if (is.null(input$long_grade1) || input$long_grade1 == "Indéfini") {
           NA_real_
         } else {
           as.numeric(input$long_grade1)
         }
-        
+
         long_grade2_val <- NA_real_
         if (show_grade2() && !is.null(input$long_grade2)) {
           long_grade2_val <- if (input$long_grade2 == "Indéfini" || input$long_grade2 == "-- Aucune --") {
@@ -870,7 +870,7 @@ server <- function(input, output, session) {
             as.numeric(input$long_grade2)
           }
         }
-        
+
         long_grade3_val <- NA_real_
         if (show_grade3() && !is.null(input$long_grade3)) {
           long_grade3_val <- if (input$long_grade3 == "Indéfini" || input$long_grade3 == "-- Aucune --") {
@@ -879,46 +879,46 @@ server <- function(input, output, session) {
             as.numeric(input$long_grade3)
           }
         }
-        
+
         incProgress(0.3, detail = "Traitement des diamètres...")
-        
+
         diam_grade1_val <- if (is.null(input$diam_grade1) || is.na(input$diam_grade1)) {
           NA_real_
         } else {
           as.numeric(input$diam_grade1)
         }
-        
+
         diam_grade2_val <- if (show_grade2() && !is.null(input$diam_grade2) && !is.na(input$diam_grade2)) {
           as.numeric(input$diam_grade2)
         } else {
           NA_real_
         }
-        
+
         diam_grade3_val <- if (show_grade3() && !is.null(input$diam_grade3) && !is.na(input$diam_grade3)) {
           as.numeric(input$diam_grade3)
         } else {
           NA_real_
         }
-        
+
         incProgress(0.4, detail = "Préparation des noms de grades...")
-        
+
         nom_grade1_val <- as.character(input$nom_grade1)
-        
+
         nom_grade2_val <- if (show_grade2() && !is.null(input$nom_grade2) && input$nom_grade2 != "") {
           as.character(input$nom_grade2)
         } else {
           NA_character_
         }
-        
+
         nom_grade3_val <- if (show_grade3() && !is.null(input$nom_grade3) && input$nom_grade3 != "") {
           as.character(input$nom_grade3)
         } else {
           NA_character_
         }
       })
-      
+
       incProgress(0.5, detail = "Exécution du calcul de billonnage...")
-      
+
       tryCatch({
         processed_Billonage(SortieBillesFusion(
           Data = processed_data_htvol(),
@@ -935,16 +935,16 @@ server <- function(input, output, session) {
           diam_grade3 = diam_grade3_val,
           Simplifier = simplifier_val
         ))
-        
+
         incProgress(0.8, detail = "Finalisation...")
-        
+
         if (!is.null(input$Sortie) && input$Sortie == "echelle_billon") {
           processed_Simul(processed_Billonage())
         }
-        
+
         incProgress(1, detail = "Terminé!")
         showNotification("Billonnage calculé avec succès!", type = "message", duration = 3)
-        
+
       }, error = function(e) {
         cat("✗ Erreur billonnage:", e$message, "\n")
         showNotification(paste("Erreur:", e$message), type = "error", duration = 5)
@@ -952,12 +952,12 @@ server <- function(input, output, session) {
       })
     })
   })
-  
+
   # Téléchargements
   output$table <- renderTable({
     data()[1:20, ]
   })
-  
+
   output$download <- downloadHandler(
     filename = function() {
       if (input$RecruesGaules == 1) {
@@ -979,7 +979,7 @@ server <- function(input, output, session) {
       write.table(processed_Simul(), file, sep = ";", row.names = FALSE)
     }
   )
-  
+
   output$downloadPlot <- downloadHandler(
     filename = function() {
       if (input$graphType == 'Évolution des variables par placette') {
@@ -993,31 +993,31 @@ server <- function(input, output, session) {
       ggsave(file, plot)
     }
   )
-  
+
   output$simulationStatus <- renderText({
     simulation_status()
   })
-  
+
   # Téléchargements fichiers d'aide (chemins www)
   output$downloadPDF <- downloadHandler(
     filename = function() { "Aide application R du simulateur SaMARE.pdf" },
     content = function(file) { file.copy("www/Aide application R du simulateur SaMARE.pdf", file) }
   )
-  
+
   output$downloadPDFtest <- downloadHandler(
     filename = function() { "Test2500m2.csv" },
-    content = function(file) { file.copy("www/Test2500m2.csv", file) }
+    content = function(file) { file.copy("data/Test2500m2.csv", file) }
   )
-  
+
   output$downloadPDFtestgaules <- downloadHandler(
     filename = function() { "GaulesTest2500m2.csv" },
-    content = function(file) { file.copy("www/GaulesTest2500m2.csv", file) }
+    content = function(file) { file.copy("data/GaulesTest2500m2.csv", file) }
   )
-  
+
   observeEvent(input$help_btn, {
     updateNavbarPage(session, "all_pages", selected = "Aide")
   })
-  
+
   observeEvent(input$back_btn, {
     updateNavbarPage(session, "all_pages", selected = "Main")
   })
@@ -1027,53 +1027,53 @@ server <- function(input, output, session) {
 vevifier_variable_meteo <- function(data) {
   select <- dplyr::select
   data <- renommer_les_colonnes(data = data)
-  
+
   data <- data %>%
     rename(id_pe = Placette, latitude = Latitude, longitude = Longitude)
-  
+
   mes_variables <- c('GrwDays', 'Ptot', 'Tmoy')
   fonctions_validation <- list(valide_GrwDays, valide_Ptot, valide_Tmoy)
   noms_remplacement <- c("growingseasonlength", "totalprecipitation", "tmean")
-  
+
   for (i in seq_along(mes_variables)) {
     if (mes_variables[i] %in% names(data) && !fonctions_validation[[i]](data)) {
       data <- select(data, -!!rlang::sym(mes_variables[i]))
     }
   }
-  
+
   variables_presentes <- intersect(mes_variables, names(data))
   for (col_names in variables_presentes) {
     if (!length(unique(data[[col_names]])) == 1) {
       data <- select(data, -!!rlang::sym(col_names))
     }
   }
-  
+
   map_noms_variables <- c(GrwDays = "growingseasonlength",
                           Ptot = "totalprecipitation",
                           Tmoy = "tmean")
-  
+
   variables_non_trouvees <- setdiff(mes_variables, names(data))
-  
+
   if (!is_empty(variables_non_trouvees)) {
     variables_a_extraire <- map_noms_variables[variables_non_trouvees]
-    
+
     data <- extract_map_plot(file = data, liste_raster = "cartes_climat", variable = variables_a_extraire)
-    
+
     if ('tmean' %in% variables_a_extraire) {
       data <- rename(data, Tmoy = tmean)
     }
-    
+
     if ('totalprecipitation' %in% variables_a_extraire) {
       data <- rename(data, Ptot = totalprecipitation)
     }
-    
+
     if ('growingseasonlength' %in% variables_a_extraire) {
       data <- rename(data, GrwDays = growingseasonlength)
     }
   }
-  
+
   data <- data %>% rename(Placette = id_pe)
-  
+
   return(data)
 }
 
