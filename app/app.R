@@ -212,6 +212,27 @@ server <- function(input, output, session) {
     }
   })
 
+  rv <- reactiveValues(
+    data_valid = FALSE,
+    extraction_choice_made = FALSE,
+    extraction_completed = FALSE,
+    climat_annuel = NULL,
+    climat_mensuel = NULL,
+    extraction_option = NULL,
+    extraction_horizon = NULL,
+    age_moy_valid = TRUE,
+    mode_visualisation = FALSE,
+    resultats_simulation = NULL,
+    placette = NULL,
+    processed_Billonage = NULL,
+    processed_Simul = NULL,
+    listeEspece = NULL,
+    simulation_terminee = FALSE,
+    show_grade2 = FALSE,
+    show_grade3 = FALSE
+    
+  )
+  
   output$dynamic_sidebar <- renderUI({
     sidebarPanel(
       fileInput(
@@ -228,7 +249,7 @@ server <- function(input, output, session) {
       htmlOutput("error"),
       htmlOutput("statut_data"),
       htmlOutput("error_data"),
-      numericInput("Horizon", "Nombre d'années de simulation (multiple de 5)", min = 5, value = NA, step = 5),
+      numericInput("Horizon", "Nombre d'années de simulation (multiple de 5)", min = 5, value = 5, step = 5),
       radioButtons("RecruesGaules", "Recrutement basé sur les gaules pour les érablières",
                    choices = list("Oui" = 1, "Non" = 0),
                    selected = 0,
@@ -252,14 +273,236 @@ server <- function(input, output, session) {
         htmlOutput("error_data_gaules_plac")
       ),
 
-      numericInput("NbIter", "Nombre d'itérations (nombre pair)", min = 2, value = NA, step = 2),
+      numericInput("NbIter", "Nombre d'itérations (nombre pair)", min = 2, value = 2, step = 2),
       radioButtons("corticale", "Maladie corticale du hêtre",
                    choices = list("Oui" = 1, "Non" = 0),
                    selected = 0,
                    inline = TRUE),
 
+      # Section traitement de coupe
+      radioButtons("TraitCoupe", "Traitement de coupe",
+                   choices = list("Oui" = 1, "Non" = 0),
+                   selected = 0,
+                   inline = TRUE),
+      conditionalPanel(
+        condition = "input.TraitCoupe == 1",
+        div(
+          style = "margin-top: 10px; padding: 10px; background-color: #e6f9e9; border-radius: 3px;",
+          p("Configurez les traitements de coupe par tranche de 5 ans:",
+            style = "font-size: 0.9em; margin-bottom: 10px;"),
+          uiOutput("ui_pentade_coupe"),
+          
+          selectInput("type_coupe", "Type de coupe:",
+                      choices = c("Aucune coupe" = "NA",
+                                  setNames(c(0:1,6:9,12:19), c("0- Coupe d'amélioration","1- Coupe d'éclaircie","6- Coupe de jardinage","7- Coupe progressive",
+                                                               "8- Éclaircie commerciale","9- Éclaicie sélective","12- Coupe progressive (CPI_CP)",
+                                                               "13- Coupe progressive (CPI_RL)","14- Coupe réserve semanciers","15- Jardinage CIMOTFF",
+                                                               "16- Jarinage gr. arbres CIMOTFF", "17- CPI_CP CIMOTFF","18- CPI_RL CIMOTFF","19- CPRS"))),
+                      #setNames(0:1,c("Éclaicie","CPRS"))),
+                      selected = "NA"),
+          
+          radioButtons("type_modif", "Type de modificateur",
+                       choices = list(
+                         "Modificateur simple (même valeur pour toutes les essences)" = "simple",
+                         "Fichier (modificateurs par essence)" = "excel"),
+                       selected = "simple",
+                       inline = FALSE),
+          
+          conditionalPanel(
+            condition = "input.type_modif == 'simple'",
+            numericInput("modif_coupe", "Modificateur (%):",
+                         value = 0, min = -80, max = 160, step = 5)),
+          
+          conditionalPanel(
+            condition = "input.type_modif == 'excel'",
+            div(
+              fileInput("modif_excel_file", "Fichier des modificateurs:",
+                        accept = c(".xlsx", ".xls", ".csv")),
+              div(
+                style = "font-size: 0.85em; color: #6c757d; font-style: italic;",
+                "Le fichier doit contenir les colonnes 'ess_ind' et 'modifier'
+                (Excel ou CSV) modifier doit se situer entre -80 et 160%")))
+          ,
+          div(
+            style = "margin-bottom: 10px;",
+            actionButton("clear_coupes", "Effacer toutes les coupes",
+                         style = "background-color: #dc3545; color: white; width: 100%;")),
+          
+          h6("Configuration actuelle des coupes:"),
+          verbatimTextOutput("display_coupes")
+        ),
+        
+        
+      ),
       uiOutput("conditionalButton")
+      
     )
+    
+  })
+  
+  # pentade de coupe
+  
+  output$ui_pentade_coupe <- renderUI({
+    req(input$Horizon)   
+    selectInput(
+      inputId = "pentade_coupe",
+      label   = "Période de coupe",
+      choices = setNames(seq(5, input$Horizon, by = 5),
+                         paste0(seq(0, input$Horizon - 5, by = 5), " - ", seq(5, input$Horizon, by = 5))),
+      selected = NULL
+    )
+  })
+  
+  # Boutons pour effacer
+  observeEvent(input$clear_coupes, {
+    if (!is.null(rv$coupe_on_vector)) {
+      rv$coupe_on_vector <- rep(NA_real_, length(rv$coupe_on_vector))
+      rv$coupe_modif_vector <- vector("list", length(rv$coupe_modif_vector))
+      showNotification("Toutes les coupes ont été effacées", type = "message", duration = 2)
+    }
+  })
+  
+  # 
+  observeEvent(input$TraitCoupe, {
+    if (input$TraitCoupe==1 && !is.null(input$Horizon)) {
+      horizon <- input$Horizon / 5
+      # Initialiser seulement si pas déjà fait
+      if (is.null(rv$coupe_on_vector)) {
+        rv$coupe_on_vector <- rep(NA_real_, horizon)
+        rv$coupe_modif_vector <- vector("list", horizon)
+      }
+    } else {
+      # Réinitialiser les vecteurs quand la case est décochée
+      rv$coupe_on_vector <- NULL
+      rv$coupe_modif_vector <- NULL
+    }
+  })
+  
+  
+  # Observateurs pour appliquer les modifications aux vecteurs
+  observeEvent( list(input$type_coupe, input$modif_coupe, input$modif_excel_file), {
+    req(input$pentade_coupe, input$type_coupe, input$Horizon)
+    
+    if (input$type_coupe == "NA") {
+      showNotification("Impossible d'appliquer une configuration avec 'Aucune coupe' sélectionnée.",
+                       type = "warning", duration = 4)
+      return()
+    }
+    
+    decennie_idx <- (as.numeric(input$pentade_coupe)/5) 
+    
+    if (input$type_coupe == "NA") {
+      rv$coupe_on_vector[decennie_idx] <- NA_real_
+      rv$coupe_modif_vector[[decennie_idx]] <- NA
+    } else {
+      rv$coupe_on_vector[decennie_idx] <- as.numeric(input$type_coupe)
+      
+      if (!is.null(input$type_modif) && input$type_modif == "simple") {
+        rv$coupe_modif_vector[[decennie_idx]] <- input$modif_coupe
+      } else if (!is.null(input$type_modif) && input$type_modif == "excel") {
+        if (!is.null(input$modif_excel_file) && !is.null(input$modif_excel_file$datapath)) {
+          tryCatch({
+            # Détecter le type de fichier par l'extension
+            file_ext <- tools::file_ext(input$modif_excel_file$name)
+            
+            if (file_ext %in% c("xlsx", "xls")) {
+              modif_data <- readxl::read_excel(input$modif_excel_file$datapath)
+            } else if (file_ext == "csv") {
+              modif_data <- read.csv(input$modif_excel_file$datapath, sep = ";", header = TRUE)
+            } else {
+              showNotification("Format de fichier non supporté. Utilisez Excel (.xlsx, .xls) ou CSV.",
+                               type = "error", duration = 5)
+              return()
+            }
+            
+            if (!all(c("ess_ind", "modifier") %in% colnames(modif_data))) {
+              showNotification("Le fichier doit contenir les colonnes 'ess_ind' et 'modifier'",
+                               type = "error", duration = 5)
+              return()
+            }
+            
+            # Ajouter le nom du fichier au data.frame
+            attr(modif_data, "filename") <- input$modif_excel_file$name
+            rv$coupe_modif_vector[[decennie_idx]] <- modif_data
+            
+          }, error = function(e) {
+            showNotification(paste("Erreur lors de la lecture du fichier:", e$message),
+                             type = "error", duration = 5)
+            return()
+          })
+        } else {
+          showNotification("Veuillez sélectionner un fichier",
+                           type = "error", duration = 5)
+          return()
+        }
+      } else {
+        rv$coupe_modif_vector[[decennie_idx]] <- 0
+      }
+    }
+    
+    showNotification(paste("Coupe appliquée à la période", input$pentade_coupe),
+                     type = "message", duration = 2)
+  })
+  
+  # Affichage des vecteurs actuels
+  output$display_coupes <- renderText({
+    if (!is.null(rv$coupe_on_vector) && length(rv$coupe_on_vector) > 0) {
+      coupe_display <- ifelse(is.na(rv$coupe_on_vector), "NA", as.character(rv$coupe_on_vector))
+      
+      modif_display <- sapply(seq_along(rv$coupe_modif_vector), function(i) {
+        x <- rv$coupe_modif_vector[[i]]
+        if (is.null(x) || (length(x) == 1 && is.na(x))) {
+          "NA"
+        } else if (is.numeric(x) && length(x) == 1) {
+          paste0(x, "%")
+        } else if (is.data.frame(x) && nrow(x) > 0) {
+          filename <- attr(x, "filename")
+          if (!is.null(filename)) {
+            filename
+          } else {
+            paste0("Excel (", nrow(x), " essences)")
+          }
+        } else {
+          "Vide"
+        }
+      })
+      
+      paste0("Coupe_ON: [", paste(coupe_display, collapse = ", "), "]\n",
+             "Modif: [", paste(modif_display, collapse = ", "), "]")
+    } else {
+      "Aucune configuration"
+    }
+  })
+  
+  # 
+  observe({
+    if (!is.null(input$Horizon) && !is.null(input$TraitCoupe) && input$TraitCoupe==1) {
+      new_horizon <- input$Horizon / 5
+      
+      # Redimensionner le vecteur coupe_on
+      if (is.null(rv$coupe_on_vector) || length(rv$coupe_on_vector) != new_horizon) {
+        old_vector <- rv$coupe_on_vector
+        rv$coupe_on_vector <- rep(NA_real_, new_horizon)
+        
+        # Conserver les anciennes valeurs si elles existent
+        if (!is.null(old_vector) && length(old_vector) > 0) {
+          copy_length <- min(length(old_vector), new_horizon)
+          rv$coupe_on_vector[1:copy_length] <- old_vector[1:copy_length]
+        }
+      }
+      
+      # Redimensionner la liste coupe_modif
+      if (is.null(rv$coupe_modif_vector) || length(rv$coupe_modif_vector) != new_horizon) {
+        old_list <- rv$coupe_modif_vector
+        rv$coupe_modif_vector <- vector("list", new_horizon)
+        
+        # Conserver les anciennes valeurs si elles existent
+        if (!is.null(old_list) && length(old_list) > 0) {
+          copy_length <- min(length(old_list), new_horizon)
+          rv$coupe_modif_vector[1:copy_length] <- old_list[1:copy_length]
+        }
+      }
+    }
   })
 
   # Lire le fichier arbres
@@ -373,17 +616,32 @@ server <- function(input, output, session) {
         h3("Simulation en cours...")
       )
     })
+    
+    # Gestion des paramètres de coupe
+    coupe_on <- if (input$TraitCoupe==1) {
+      rv$coupe_on_vector
+    } else {
+      NULL
+    }
+    
+    coupe_modif <- if (input$TraitCoupe==1) {
+      as.list(rv$coupe_modif_vector)
+    } else {
+      NULL
+    }
 
     withProgress(message = 'Simulation en cours...', value = 0, {
       tryCatch({
         if (input$RecruesGaules == 1) {
           result <- SimulSaMARE(NbIter = input$NbIter, Horizon = (input$Horizon / 5),
                                 RecruesGaules = input$RecruesGaules, Data = vevifier_meteo(),
-                                Gaules = gaule_data(), MCH = input$corticale)
+                                Gaules = gaule_data(), MCH = input$corticale
+                                ,Coupe_ON = coupe_on, Coupe_modif = coupe_modif)
         } else {
           result <- SimulSaMARE(NbIter = input$NbIter, Horizon = (input$Horizon / 5),
                                 RecruesGaules = input$RecruesGaules, Data = vevifier_meteo(),
-                                MCH = input$corticale)
+                                MCH = input$corticale
+                                , Coupe_ON = coupe_on, Coupe_modif = coupe_modif)
         }
 
         placette(unique(result$Placette))
@@ -683,12 +941,13 @@ server <- function(input, output, session) {
     donnees_graphique(NULL)
     removeModal()
 
-    updateNumericInput(session, "Horizon", value = NA)
+    updateNumericInput(session, "Horizon", value = 5)
     updateRadioButtons(session, "RecruesGaules", selected = 0)
-    updateNumericInput(session, "NbIter", value = NA)
+    updateNumericInput(session, "NbIter", value = 2)
     updateRadioButtons(session, "corticale", selected = 0)
     updateSelectInput(session, "variable", selected = NULL)
     updatePickerInput(session, "placette", selected = NULL)
+    updatePickerInput(session, "TraitCoupe", selected = 0)
 
     output$dynamic_mainpanel <- renderUI({ NULL })
 
@@ -731,11 +990,66 @@ server <- function(input, output, session) {
           htmlOutput("statut_data_gaules_plac"),
           htmlOutput("error_data_gaules_plac")
         ),
-        numericInput("NbIter", "Nombre d'itérations (nombre pair)", min = 2, value = NA, step = 2),
+        numericInput("NbIter", "Nombre d'itérations (nombre pair)", min = 2, value = 2, step = 2),
         radioButtons("corticale", "Maladie corticale du hêtre",
                      choices = list("Oui" = 1, "Non" = 0),
                      selected = 0,
                      inline = TRUE),
+        # Section traitement de coupe
+        radioButtons("TraitCoupe", "Traitement de coupe",
+                     choices = list("Oui" = 1, "Non" = 0),
+                     selected = 0,
+                     inline = TRUE),
+        conditionalPanel(
+          condition = "input.TraitCoupe == 1",
+          div(
+            style = "margin-top: 10px; padding: 10px; background-color: #e6f9e9; border-radius: 3px;",
+            p("Configurez les traitements de coupe par tranche de 5 ans:",
+              style = "font-size: 0.9em; margin-bottom: 10px;"),
+            uiOutput("ui_pentade_coupe"),
+            
+            selectInput("type_coupe", "Type de coupe:",
+                        choices = c("Aucune coupe" = "NA",
+                                    setNames(c(0:1,6:9,12:19), c("0- Coupe d'amélioration","1- Coupe d'éclaircie","6- Coupe de jardinage","7- Coupe progressive",
+                                                                 "8- Éclaircie commerciale","9- Éclaicie sélective","12- Coupe progressive (CPI_CP)",
+                                                                 "13- Coupe progressive (CPI_RL)","14- Coupe réserve semanciers","15- Jardinage CIMOTFF",
+                                                                 "16- Jarinage gr. arbres CIMOTFF", "17- CPI_CP CIMOTFF","18- CPI_RL CIMOTFF","19- CPRS"))),
+                        #setNames(0:1,c("Éclaicie","CPRS"))),
+                        selected = "NA"),
+            
+            radioButtons("type_modif", "Type de modificateur",
+                         choices = list(
+                           "Modificateur simple (même valeur pour toutes les essences)" = "simple",
+                           "Fichier (modificateurs par essence)" = "excel"),
+                         selected = "simple",
+                         inline = FALSE),
+            
+            conditionalPanel(
+              condition = "input.type_modif == 'simple'",
+              numericInput("modif_coupe", "Modificateur (%):",
+                           value = 0, min = -80, max = 160, step = 5)),
+            
+            conditionalPanel(
+              condition = "input.type_modif == 'excel'",
+              div(
+                fileInput("modif_excel_file", "Fichier des modificateurs:",
+                          accept = c(".xlsx", ".xls", ".csv")),
+                div(
+                  style = "font-size: 0.85em; color: #6c757d; font-style: italic;",
+                  "Le fichier doit contenir les colonnes 'ess_ind' et 'modifier'
+                (Excel ou CSV) modifier doit se situer entre -80 et 160%")))
+            ,
+            div(
+              style = "margin-bottom: 10px;",
+              actionButton("clear_coupes", "Effacer toutes les coupes",
+                           style = "background-color: #dc3545; color: white; width: 100%;")),
+            
+            h6("Configuration actuelle des coupes:"),
+            verbatimTextOutput("display_coupes")
+          ),
+          
+          
+        ),
         uiOutput("conditionalButton")
       )
     })
