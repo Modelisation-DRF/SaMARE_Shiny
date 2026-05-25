@@ -124,7 +124,7 @@ ui <- fluidPage(
       img(src = "SaMARE_MRNF_Final.jpg", height = 50, width = 70),
       div(
         id = "main_app",
-        tags$div(style = "font-size: 10px;", "SaMARE 2.3.3"),
+        tags$div(style = "font-size: 10px;", as.character(packageVersion("SimulateurSaMARE"))),
         sidebarLayout(
           uiOutput("dynamic_sidebar"),
           mainPanel(
