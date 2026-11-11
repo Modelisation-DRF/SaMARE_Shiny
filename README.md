@@ -65,7 +65,7 @@ install.packages(c(
 **Packages GitHub :**
 ```r
 install.packages("remotes")
-remotes::install_github("Modelisation-DRF/SimulateurSaMARE")
+remotes::install_github("Modelisation-DRF/SaMARE")
 remotes::install_github("Modelisation-DRF/BillonnagePetro")
 remotes::install_github("Modelisation-DRF/ExtractMap")
 remotes::install_github("Modelisation-DRF/OutilsDRF")
